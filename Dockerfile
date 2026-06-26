@@ -17,7 +17,9 @@ RUN pip install -r requirements-deploy.txt
 
 COPY app ./app
 
-# Railway injeta PORT; a app le settings.port a partir de PORT (case-insensitive).
+# Railway injeta PORT e faz routing para essa porta. Bind explicito a 0.0.0.0
+# (nao a settings.host, que pode ficar vazio/127.0.0.1 se o env HOST falhar).
+# Shell form para expandir ${PORT} em runtime.
 EXPOSE 8000
 
-CMD ["python", "-m", "app.main"]
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
