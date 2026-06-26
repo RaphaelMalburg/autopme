@@ -1,0 +1,19 @@
+{
+  "name": "autopme-whatsapp-gateway",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Baileys WhatsApp gateway sidecar for AutoPME Demo Studio",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "baileys": "^6.7.23",
+    "express": "^4.19.0",
+    "qrcode-terminal": "^0.12.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

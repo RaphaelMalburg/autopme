@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AutoPME Demo Studio</title>
+  <!-- LiveKit Web SDK via CDN (UMD global: LivekitClient) -->
+  <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --panel: #171a21;
+      --panel-2: #1e222b;
+      --border: #2a2f3a;
+      --text: #e6e8ec;
+      --muted: #9aa3b2;
+      --accent: #3b82f6;
+      --accent-2: #22c55e;
+      --danger: #ef4444;
+      --warn: #f59e0b;
+      --radius: 8px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+    header {
+      padding: 14px 20px;
+      background: linear-gradient(180deg, #1b1f29, #15181f);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header .logo {
+      width: 28px; height: 28px; border-radius: 6px;
+      background: var(--accent); display: grid; place-items: center;
+      font-weight: 700; color: white;
+    }
+    header h1 { font-size: 18px; margin: 0; font-weight: 600; }
+    header .sub { color: var(--muted); font-size: 12px; }
+    main { padding: 20px; max-width: 1100px; margin: 0 auto; }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+    .card h2 { margin: 0 0 12px; font-size: 15px; }
+    .card h3 { margin: 16px 0 8px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+    input, select, textarea {
+      width: 100%;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    textarea { resize: vertical; min-height: 80px; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+    button {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 9px 14px;
+      font-size: 14px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+      button:hover { filter: brightness(1.08); }
+      button:disabled { opacity: .5; cursor: not-allowed; }
+      button.secondary { background: var(--panel-2); border: 1px solid var(--border); color: var(--text); }
+      button.danger { background: var(--danger); }
+      button.ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+    .btnrow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .scenarios { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 0 16px; }
+    @media (max-width: 820px) { .scenarios { grid-template-columns: repeat(2, 1fr); } }
+    .scn-btn {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 8px;
+      font-size: 13px;
+      text-align: center;
+      border-radius: 6px;
+    }
+    .scn-btn.active { border-color: var(--accent); background: #1a2333; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .badge {
+      display: inline-block;
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .badge.ok { color: var(--accent-2); border-color: var(--accent-2); }
+    .badge.warn { color: var(--warn); border-color: var(--warn); }
+    .badge.err { color: var(--danger); border-color: var(--danger); }
+    .note { font-size: 12px; color: var(--muted); margin-top: 8px; }
+    .transcript {
+      margin-top: 12px;
+      max-height: 320px;
+      overflow-y: auto;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+    .t-line { padding: 4px 0; border-bottom: 1px dashed #232834; }
+    .t-line:last-child { border-bottom: none; }
+    .t-agent { color: #8fc9ff; }
+    .t-user { color: #c9b8ff; }
+    .t-meta { color: var(--muted); font-size: 11px; margin-left: 6px; }
+    .chat { margin-top: 10px; max-height: 320px; overflow-y: auto; background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; padding: 10px; }
+    .bubble { max-width: 80%; padding: 8px 10px; border-radius: 10px; margin: 6px 0; font-size: 13px; word-wrap: break-word; }
+    .bubble.out { background: var(--accent); color: white; margin-left: auto; }
+    .bubble.in { background: #2a2f3a; color: var(--text); }
+    .bubble .who { font-size: 10px; color: rgba(255,255,255,.7); display: block; }
+    .bubble.in .who { color: var(--muted); }
+    .preview { background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; padding: 10px; margin: 8px 0; font-size: 13px; }
+    .preview .ph { color: var(--muted); font-size: 11px; }
+    .roi-result { font-size: 38px; font-weight: 700; color: var(--accent-2); margin: 12px 0; }
+    .roi-sub { color: var(--muted); font-size: 13px; }
+    .kv { font-size: 13px; }
+    .kv b { color: var(--text); }
+    .qr { background: #fff; padding: 10px; border-radius: 6px; display: inline-block; margin-top: 8px; }
+    .qr pre { color: #000; font-size: 10px; line-height: 1.1; margin: 0; font-family: var(--mono); }
+    .err { color: var(--danger); font-size: 13px; margin-top: 8px; }
+    .okmsg { color: var(--accent-2); font-size: 13px; margin-top: 8px; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--muted); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    footer { color: var(--muted); font-size: 11px; text-align: center; padding: 20px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">A</div>
+    <div>
+      <h1>AutoPME Demo Studio</h1>
+      <div class="sub">Demo presencial · automação para PMEs no Porto · corre 100% local</div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Configuração da visita -->
+    <section class="card" id="config-card">
+      <h2>1 · Configurar visita</h2>
+      <div class="grid">
+        <div>
+          <label for="niche">Nicho (7)</label>
+          <select id="niche"><option value="">A carregar nichos…</option></select>
+          <label for="business_name">Nome do negócio</label>
+          <input id="business_name" type="text" placeholder="Ex.: Clínica Dentária Exemplo" />
+        </div>
+        <div>
+          <label for="extra_opening">Horários</label>
+          <input id="extra_opening" type="text" placeholder="Seg-Sex 9h-19h, Sáb 9h-13h" />
+          <label for="extra_services">Serviços</label>
+          <input id="extra_services" type="text" placeholder="Limpeza, branqueamento, implantes…" />
+          <label for="extra_prices">Preços</label>
+          <input id="extra_prices" type="text" placeholder="Limpeza 60€, consulta 50€…" />
+          <label for="extra_notes">Notas</label>
+          <input id="extra_notes" type="text" placeholder="Notas extra (opcional)" />
+        </div>
+      </div>
+      <div class="btnrow">
+        <button id="btn-load">Carregar demo</button>
+        <span class="note" id="config-status"></span>
+      </div>
+    </section>
+
+    <!-- Seletor de cenário -->
+    <section class="card" style="margin-top:16px;">
+      <h2>2 · Escolher cenário</h2>
+      <div class="scenarios" id="scenarios">
+        <button class="scn-btn active" data-scn="voice-inbound">Voz Inbound</button>
+        <button class="scn-btn" data-scn="voice-outbound">Voz Outbound</button>
+        <button class="scn-btn" data-scn="whatsapp">WhatsApp FAQ</button>
+        <button class="scn-btn" data-scn="ingest">Ingestão de Documentos</button>
+        <button class="scn-btn" data-scn="reactivation">Reativação de Inativos</button>
+        <button class="scn-btn" data-scn="roi">Calculadora de ROI</button>
+      </div>
+
+      <!-- Painel: Voz Inbound -->
+      <div class="panel active" id="panel-voice-inbound">
+        <h3>Voz Inbound · o cliente liga para o agente</h3>
+        <div class="btnrow">
+          <button id="btn-call-in">Ligar para o agente</button>
+          <button id="btn-hang-in" class="danger" disabled>Desligar</button>
+          <span class="badge" id="call-state-in">Desligado</span>
+        </div>
+        <div class="note" id="room-info-in"></div>
+        <h3>Transcrição ao vivo</h3>
+        <div class="transcript" id="transcript-in"><span class="note">Sem transcrição ainda.</span></div>
+      </div>
+
+      <!-- Painel: Voz Outbound -->
+      <div class="panel" id="panel-voice-outbound">
+        <h3>Voz Outbound · o agente liga para si</h3>
+        <div class="btnrow">
+          <button id="btn-call-out">Agente liga para mim</button>
+          <button id="btn-hang-out" class="danger" disabled>Atender / Desligar</button>
+          <span class="badge" id="call-state-out">Desligado</span>
+        </div>
+        <div class="note" id="room-info-out"></div>
+        <h3>Transcrição ao vivo</h3>
+        <div class="transcript" id="transcript-out"><span class="note">Sem transcrição ainda.</span></div>
+      </div>
+
+      <!-- Painel: WhatsApp FAQ -->
+      <div class="panel" id="panel-whatsapp">
+        <h3>WhatsApp FAQ · chat de demonstração</h3>
+        <div class="kv" id="wa-qr-wrap">
+          <b>Estado da ligação WhatsApp:</b> <span class="badge" id="wa-status">a verificar…</span>
+          <div id="wa-qr"></div>
+          <div class="btnrow"><button id="btn-wa-qr" class="secondary">Atualizar QR</button></div>
+        </div>
+        <label for="wa-to">Número de destino (ex.: 3519XXXXXXXX)</label>
+        <input id="wa-to" type="text" placeholder="351912345678" />
+        <label for="wa-msg">Mensagem</label>
+        <input id="wa-msg" type="text" placeholder="Qual o preço de uma limpeza?" />
+        <div class="btnrow">
+          <button id="btn-wa-send">Enviar</button>
+          <span class="note" id="wa-status-line"></span>
+        </div>
+        <div class="chat" id="wa-chat"><span class="note">Sem mensagens ainda.</span></div>
+      </div>
+
+      <!-- Painel: Ingestão de Documentos -->
+      <div class="panel" id="panel-ingest">
+        <h3>Ingestão de Documentos · extrai dados e envia email</h3>
+        <label for="ingest-file">Ficheiro (PDF, imagem, .txt, .docx…)</label>
+        <input id="ingest-file" type="file" />
+        <div class="btnrow">
+          <button id="btn-ingest">Extrair e enviar</button>
+          <span class="note" id="ingest-status"></span>
+        </div>
+        <h3>Dados extraídos</h3>
+        <pre class="transcript" id="ingest-extracted" style="white-space:pre-wrap;"><span class="note">Sem dados ainda.</span></pre>
+        <h3>Pré-visualização do email</h3>
+        <pre class="transcript" id="ingest-email" style="white-space:pre-wrap;"><span class="note">Sem email ainda.</span></pre>
+      </div>
+
+      <!-- Painel: Reativação de Inativos -->
+      <div class="panel" id="panel-reactivation">
+        <h3>Reativação de Inativos · gera mensagens personalizadas</h3>
+        <label for="rea-list">Lista de inativos — um por linha: <code>nome;telefone;última visita</code></label>
+        <textarea id="rea-list" placeholder="João Silva;351912345678;12/03/2025&#10;Maria Sousa;351923456789;05/01/2025&#10;Pedro Lima;351934567890;28/11/2024"></textarea>
+        <div class="btnrow">
+          <button id="btn-rea">Gerar mensagens</button>
+          <span class="note" id="rea-status"></span>
+        </div>
+        <div id="rea-context" class="note"></div>
+        <div id="rea-previews"></div>
+      </div>
+
+      <!-- Painel: Calculadora de ROI -->
+      <div class="panel" id="panel-roi">
+        <h3>Calculadora de ROI · redução de no-shows</h3>
+        <div class="row2">
+          <div>
+            <label for="roi-day">Consultas / dia</label>
+            <input id="roi-day" type="number" min="0" step="1" value="20" />
+          </div>
+          <div>
+            <label for="roi-cur">Taxa de no-show atual (%)</label>
+            <input id="roi-cur" type="number" min="0" max="100" step="0.5" value="15" />
+          </div>
+          <div>
+            <label for="roi-tgt">Taxa de no-show alvo (%)</label>
+            <input id="roi-tgt" type="number" min="0" max="100" step="0.5" value="5" />
+          </div>
+          <div>
+            <label for="roi-rev">Receita / consulta (€)</label>
+            <input id="roi-rev" type="number" min="0" step="1" value="60" />
+          </div>
+        </div>
+        <div class="btnrow"><button id="btn-roi">Calcular</button></div>
+        <div class="roi-result" id="roi-result">—</div>
+        <div class="roi-sub" id="roi-sub">Preencha os valores e prima «Calcular».</div>
+      </div>
+    </section>
+  </main>
+
+  <footer>AutoPME Demo Studio · demo local · chaves existentes (OpenRouter + Resend)</footer>
+
+  <script>
+    "use strict";
+    // ---- Estado global -------------------------------------------------------
+    const state = {
+      niches: [],            // [{id,label,role,booking_term}, ...]
+      config: null,          // {niche, business_name, extra}
+      built: null,           // resposta de /api/scenarios/build
+      rooms: {},             // { 'in': LivekitRoom, 'out': LivekitRoom }
+    };
+
+    const API = ""; // mesmo origem; routers prefix /api
+
+    // ---- Utilidades ----------------------------------------------------------
+    const $ = (id) => document.getElementById(id);
+
+    function setErr(el, msg) { if (el) { el.textContent = msg; el.className = msg ? "err" : ""; } }
+    function setOk(el, msg) { if (el) { el.textContent = msg; el.className = msg ? "okmsg" : ""; } }
+
+    async function apiGet(path) {
+      const res = await fetch(API + path);
+      if (!res.ok) throw new Error("GET " + path + " -> " + res.status);
+      return res.json();
+    }
+    async function apiPost(path, body) {
+      const res = await fetch(API + path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error("POST " + path + " -> " + res.status);
+      return res.json();
+    }
+    async function apiPostForm(path, form) {
+      const res = await fetch(API + path, { method: "POST", body: form });
+      if (!res.ok) throw new Error("POST " + path + " -> " + res.status);
+      return res.json();
+    }
+
+    function requireConfig() {
+      if (!state.config) {
+        alert("Carregue primeiro a demo (passo 1).");
+        return false;
+      }
+      return true;
+    }
+    function bookingTermFor(nicheId) {
+      const n = state.niches.find((x) => x.id === nicheId);
+      return n ? n.booking_term : "marcação";
+    }
+    function eur(v) {
+      try { return new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(v); }
+      catch (e) { return v.toFixed(2) + " €"; }
+    }
+
+    // ---- 1) Carregar nichos + demo ------------------------------------------
+    async function loadNiches() {
+      try {
+        const niches = await apiGet("/api/scenarios/niches");
+        state.niches = Array.isArray(niches) ? niches : [];
+        const sel = $("niche");
+        sel.innerHTML = "";
+        if (state.niches.length === 0) {
+          sel.innerHTML = '<option value="">(sem nichos)</option>';
+          setErr($("config-status"), "O serviço de cenários não devolveu nichos.");
+          return;
+        }
+        state.niches.forEach((n) => {
+          const o = document.createElement("option");
+          o.value = n.id; o.textContent = n.label || n.id;
+          sel.appendChild(o);
+        });
+        setOk($("config-status"), state.niches.length + " nichos disponíveis.");
+      } catch (e) {
+        $("niche").innerHTML = '<option value="">(erro)</option>';
+        setErr($("config-status"), "Erro ao carregar nichos: " + e.message);
+      }
+    }
+
+    async function loadDemo() {
+      const niche = $("niche").value;
+      const business_name = $("business_name").value.trim();
+      if (!niche) { setErr($("config-status"), "Escolha um nicho."); return; }
+      if (!business_name) { setErr($("config-status"), "Indique o nome do negócio."); return; }
+      const extra = {
+        opening_hours: $("extra_opening").value.trim(),
+        services: $("extra_services").value.trim(),
+        prices: $("extra_prices").value.trim(),
+        notes: $("extra_notes").value.trim(),
+      };
+      const st = $("config-status");
+      st.textContent = "A carregar demo…"; st.className = "note";
+      try {
+        const built = await apiPost("/api/scenarios/build", { niche, business_name, extra });
+        state.built = built;
+        state.config = { niche, business_name, extra };
+        const term = bookingTermFor(niche);
+        setOk(st, "Demo carregada para «" + business_name + "» (termo: " + term + ").");
+      } catch (e) {
+        setErr(st, "Erro ao carregar demo: " + e.message);
+      }
+    }
+
+    // ---- 2) Seletor de cenário ----------------------------------------------
+    function selectScenario(scn) {
+      document.querySelectorAll(".scn-btn").forEach((b) =>
+        b.classList.toggle("active", b.dataset.scn === scn));
+      document.querySelectorAll(".panel").forEach((p) =>
+        p.classList.toggle("active", p.id === "panel-" + scn));
+      if (scn === "whatsapp") refreshWhatsAppQR();
+    }
+
+    // ---- LiveKit: juntar-se à room + transcrição ----------------------------
+    function livekitAvailable() {
+      return typeof window.LivekitClient !== "undefined";
+    }
+
+    function appendTranscript(containerId, role, content, ts) {
+      const el = $(containerId);
+      if (el.querySelector(".note")) el.innerHTML = "";
+      const line = document.createElement("div");
+      line.className = "t-line " + (role === "agent" ? "t-agent" : "t-user");
+      const who = document.createElement("span");
+      who.className = "t-meta";
+      who.textContent = (role === "agent" ? "agente" : "cliente") +
+        (ts ? " · " + new Date(ts).toLocaleTimeString("pt-PT") : "");
+      line.textContent = content || "";
+      line.appendChild(who);
+      el.appendChild(line);
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function onTrackSubscribed(track /*, publication, participant */) {
+      // Anexar áudio remoto (voz do agente) ao documento.
+      try {
+        if (track.kind === LivekitClient.Track.Kind.Audio) {
+          const el = track.attach();
+          if (el) { el.style.display = "none"; document.body.appendChild(el); }
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    async function startVoiceCall(direction) {
+      if (!requireConfig()) return;
+      if (!livekitAvailable()) {
+        alert("O SDK LiveKit não carregou (CDN). Verifique a ligação à internet.");
+        return;
+      }
+      const key = direction === "outbound" ? "out" : "in";
+      const btnCall = $("btn-call-" + (direction === "outbound" ? "out" : "in"));
+      const btnHang = $("btn-hang-" + key);
+      const stateBadge = $("call-state-" + key);
+      const info = $("room-info-" + key);
+      const trId = "transcript-" + key;
+
+      if (state.rooms[key]) { alert("Já existe uma chamada ativa."); return; }
+      btnCall.disabled = true;
+      stateBadge.textContent = "A iniciar…"; stateBadge.className = "badge warn";
+      setErr(info, "");
+      try {
+        const r = await apiPost("/api/voice/call/start", {
+          niche: state.config.niche,
+          business_name: state.config.business_name,
+          direction: direction,
+        });
+        info.innerHTML = "Room: <b>" + (r.room_name || "?") + "</b> · ws: <b>" + (r.ws_url || "?") + "</b>";
+        stateBadge.textContent = "A juntar-se à room…"; stateBadge.className = "badge warn";
+        const room = new LivekitClient.Room({ adaptiveStream: true, dynacast: true });
+        room.on(LivekitClient.RoomEvent.DataReceived, (payload /*, participant, kind, topic*/) => {
+          let text; try { text = new TextDecoder().decode(payload); } catch (e) { return; }
+          let msg; try { msg = JSON.parse(text); } catch (e) { return; }
+          if (msg && msg.type === "transcript") {
+            appendTranscript(trId, msg.role, msg.content, msg.ts);
+          }
+        });
+        room.on(LivekitClient.RoomEvent.TrackSubscribed, onTrackSubscribed);
+        room.on(LivekitClient.RoomEvent.Disconnected, () => {
+          stateBadge.textContent = "Desligado"; stateBadge.className = "badge";
+          btnCall.disabled = false; btnHang.disabled = true;
+          state.rooms[key] = null;
+        });
+        // Alguns browsers (Safari/iOS) exigem um clique para reproduzir áudio.
+        room.on(LivekitClient.RoomEvent.AudioPlaybackStatusChanged, () => {
+          if (!room.canPlaybackAudio) {
+            const btn = document.createElement("button");
+            btn.textContent = "Ativar som"; btn.className = "secondary";
+            btn.onclick = async () => { try { await room.startAudio(); btn.remove(); } catch (e) {} };
+            info.appendChild(btn);
+          }
+        });
+        await room.connect(r.ws_url, r.token);
+        // Publicar microfone local (o utilizador fala com o agente).
+        try { await room.localParticipant.setMicrophoneEnabled(true); }
+        catch (e) { /* microfone pode ser recusado; a chamada ainda decorre */ }
+        state.rooms[key] = room;
+        stateBadge.textContent = "Em chamada"; stateBadge.className = "badge ok";
+        btnHang.disabled = false;
+      } catch (e) {
+        stateBadge.textContent = "Erro"; stateBadge.className = "badge err";
+        setErr(info, "Falha ao iniciar chamada: " + e.message);
+        btnCall.disabled = false;
+      }
+    }
+
+    function hangUp(key) {
+      const room = state.rooms[key];
+      if (room) { try { room.disconnect(); } catch (e) {} }
+    }
+
+    // ---- WhatsApp FAQ --------------------------------------------------------
+    async function refreshWhatsAppQR() {
+      const st = $("wa-status"); const qrBox = $("wa-qr");
+      st.textContent = "a verificar…"; st.className = "badge warn";
+      qrBox.innerHTML = "";
+      try {
+        const r = await apiGet("/api/whatsapp/qr");
+        const status = r.status || "waiting";
+        st.textContent = status === "connected" ? "ligado" : "a aguardar ligação";
+        st.className = "badge " + (status === "connected" ? "ok" : "warn");
+        const qr = r.qr || "";
+        if (qr) {
+          if (qr.startsWith("data:") || qr.startsWith("http")) {
+            const img = document.createElement("img");
+            img.src = qr; img.width = 200; img.alt = "QR WhatsApp";
+            const wrap = document.createElement("div"); wrap.className = "qr";
+            wrap.appendChild(img); qrBox.appendChild(wrap);
+          } else {
+            const wrap = document.createElement("div"); wrap.className = "qr";
+            const pre = document.createElement("pre");
+            pre.textContent = qr; wrap.appendChild(pre); qrBox.appendChild(wrap);
+          }
+        }
+      } catch (e) {
+        st.textContent = "indisponível"; st.className = "badge err";
+        setErr($("wa-status-line"), "QR: " + e.message);
+      }
+    }
+
+    async function sendWhatsApp() {
+      const to = $("wa-to").value.trim();
+      const message = $("wa-msg").value.trim();
+      const statusLine = $("wa-status-line");
+      if (!to || !message) { setErr(statusLine, "Indique número e mensagem."); return; }
+      const chat = $("wa-chat");
+      if (chat.querySelector(".note")) chat.innerHTML = "";
+      // bolha do utilizador
+      const out = document.createElement("div"); out.className = "bubble out";
+      out.innerHTML = '<span class="who">eu → ' + to + '</span>' + escapeHtml(message);
+      chat.appendChild(out); chat.scrollTop = chat.scrollHeight;
+      $("wa-msg").value = "";
+      statusLine.textContent = "a enviar…"; statusLine.className = "note";
+      let sent = false;
+      try {
+        const r = await apiPost("/api/whatsapp/send", { to, message });
+        sent = !!(r && r.ok);
+        statusLine.textContent = sent ? "enviado ✓" : "resposta inesperada";
+        statusLine.className = sent ? "okmsg" : "err";
+      } catch (e) {
+        statusLine.textContent = "envio falhou (simulado)"; statusLine.className = "err";
+      }
+      // Resposta simulada do agente (demo local — não há canal de inbound no contrato).
+      const inb = document.createElement("div"); inb.className = "bubble in";
+      inb.innerHTML = '<span class="who">agente [simulado]</span>' +
+        escapeHtml(simulatedReply(message));
+      chat.appendChild(inb); chat.scrollTop = chat.scrollHeight;
+    }
+
+    function simulatedReply(userMsg) {
+      // Resposta simples de FAQ para demo (não é negócio — apenas ilustração).
+      const m = (userMsg || "").toLowerCase();
+      if (m.includes("preç") || m.includes("preco") || m.includes("quanto")) {
+        return "Obrigado pelo contacto! Os preços constam na nossa demonstração. " +
+          "Posso marcar a sua consulta, em que dia prefere?";
+      }
+      if (m.includes("hora") || m.includes("marcar") || m.includes("marca")) {
+        return "Com certeza! Para que dia e hora gostaria de marcar?";
+      }
+      return "Obrigado pelo seu contacto! Alguém da equipa irá responder em breve. " +
+        "Posso ajudar a marcar já agora?";
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    // ---- Ingestão de Documentos ---------------------------------------------
+    async function ingestDocument() {
+      const fileInput = $("ingest-file");
+      const status = $("ingest-status");
+      if (!fileInput.files || fileInput.files.length === 0) {
+        setErr(status, "Selecione um ficheiro."); return;
+      }
+      status.textContent = "A processar…"; status.className = "note";
+      $("ingest-extracted").innerHTML = '<span class="note">A processar…</span>';
+      $("ingest-email").innerHTML = '<span class="note">A processar…</span>';
+      try {
+        const form = new FormData();
+        form.append("file", fileInput.files[0]);
+        const r = await apiPostForm("/api/whatsapp/ingest", form);
+        $("ingest-extracted").textContent = JSON.stringify(r.extracted || {}, null, 2);
+        $("ingest-email").textContent = r.email_preview || "(sem pré-visualização)";
+        setOk(status, "Email enviado: " + (r.email_sent ? "sim ✓" : "não"));
+      } catch (e) {
+        setErr(status, "Erro: " + e.message);
+        $("ingest-extracted").textContent = "";
+        $("ingest-email").textContent = "";
+      }
+    }
+
+    // ---- Reativação de Inativos ---------------------------------------------
+    async function reactivate() {
+      if (!requireConfig()) return;
+      const list = $("rea-list").value.trim();
+      const status = $("rea-status");
+      const ctx = $("rea-context");
+      const previews = $("rea-previews");
+      previews.innerHTML = "";
+      if (!list) { setErr(status, "Cole uma lista de inativos."); return; }
+      status.textContent = "A gerar…"; status.className = "note";
+
+      // Garantir contexto de cenário (chama /api/scenarios/build se ainda não carregado).
+      let built = state.built;
+      if (!built) {
+        try {
+          built = await apiPost("/api/scenarios/build", {
+            niche: state.config.niche,
+            business_name: state.config.business_name,
+            extra: state.config.extra,
+          });
+          state.built = built;
+        } catch (e) {
+          setErr(status, "Erro ao carregar contexto: " + e.message); return;
+        }
+      }
+      const term = bookingTermFor(state.config.niche);
+      const biz = state.config.business_name;
+      ctx.textContent = "Contexto carregado · termo de marcação: " + term +
+        " · primeira mensagem outbound: " + ((built && built.first_message_outbound) || "—");
+
+      const lines = list.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+      lines.forEach((line, idx) => {
+        const parts = line.split(";").map((s) => s.trim());
+        const nome = parts[0] || "(sem nome)";
+        const telefone = parts[1] || "";
+        const ultima = parts[2] || "";
+        const msg =
+          "Olá " + nome + ", falamos da " + biz + ". " +
+          "Reparámos que não nos visita desde " + (ultima || "há algum tempo") + ". " +
+          "Gostávamos de o convidar a marcar a sua " + term + ". " +
+          "Em que podemos ajudar?";
+        const card = document.createElement("div"); card.className = "preview";
+        card.innerHTML =
+          '<div class="ph">#' + (idx + 1) + " · " + escapeHtml(nome) +
+          (telefone ? " · " + escapeHtml(telefone) : "") + "</div>" +
+          escapeHtml(msg);
+        previews.appendChild(card);
+      });
+      setOk(status, lines.length + " mensagem(ns) gerada(s).");
+    }
+
+    // ---- Calculadora de ROI --------------------------------------------------
+    function calcROI() {
+      const day = parseFloat($("roi-day").value) || 0;
+      const cur = parseFloat($("roi-cur").value) || 0;
+      const tgt = parseFloat($("roi-tgt").value) || 0;
+      const rev = parseFloat($("roi-rev").value) || 0;
+      // poupança mensal = consultas/dia * 22 * (atual - alvo)/100 * receita
+      const saved = day * 22 * ((cur - tgt) / 100) * rev;
+      $("roi-result").textContent = eur(saved);
+      $("roi-sub").textContent =
+        day + " consultas/dia × 22 dias × (" + cur + "% − " + tgt + "%) × " + eur(rev) +
+        (saved < 0 ? "  (valor negativo: taxa alvo é pior que a atual)" : "");
+    }
+
+    // ---- Bindings ------------------------------------------------------------
+    document.addEventListener("DOMContentLoaded", () => {
+      loadNiches();
+      $("btn-load").addEventListener("click", loadDemo);
+      document.querySelectorAll(".scn-btn").forEach((b) =>
+        b.addEventListener("click", () => selectScenario(b.dataset.scn)));
+      $("btn-call-in").addEventListener("click", () => startVoiceCall("inbound"));
+      $("btn-hang-in").addEventListener("click", () => hangUp("in"));
+      $("btn-call-out").addEventListener("click", () => startVoiceCall("outbound"));
+      $("btn-hang-out").addEventListener("click", () => hangUp("out"));
+      $("btn-wa-qr").addEventListener("click", refreshWhatsAppQR);
+      $("btn-wa-send").addEventListener("click", sendWhatsApp);
+      $("btn-ingest").addEventListener("click", ingestDocument);
+      $("btn-rea").addEventListener("click", reactivate);
+      $("btn-roi").addEventListener("click", calcROI);
+      // recálculo ao vivo também ao mudar inputs
+      ["roi-day", "roi-cur", "roi-tgt", "roi-rev"].forEach((id) =>
+        $(id).addEventListener("input", calcROI));
+      calcROI();
+    });
+  </script>
+</body>
+</html>
