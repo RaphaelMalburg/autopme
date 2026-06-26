@@ -59,21 +59,45 @@ def _format_knowledge_block(
     return "\n".join(lines) if has_extra else example
 
 
+# Aberturas por idioma (fallback). {business_name} substituido depois.
+_OPENINGS: dict[str, dict[str, str]] = {
+    "pt-PT": {"inbound": "Olá, {business_name}, em que posso ajudar?",
+             "outbound": "Olá, falo de {business_name}, estou a ligar para confirmar a sua marcação."},
+    "pt-BR": {"inbound": "Olá, {business_name}, em que posso ajudar?",
+             "outbound": "Olá, falo de {business_name}, estou ligando para confirmar o seu agendamento."},
+    "en-US": {"inbound": "Hello, {business_name}, how can I help you?",
+             "outbound": "Hello, I'm calling from {business_name} to confirm your appointment."},
+    "en-GB": {"inbound": "Hello, {business_name}, how can I help you?",
+             "outbound": "Hello, I'm calling from {business_name} to confirm your appointment."},
+    "es-ES": {"inbound": "Hola, {business_name}, ¿en qué puedo ayudarle?",
+             "outbound": "Hola, llamo de {business_name} para confirmar su cita."},
+    "fr-FR": {"inbound": "Bonjour, {business_name}, comment puis-je vous aider ?",
+             "outbound": "Bonjour, j'appelle de {business_name} pour confirmer votre rendez-vous."},
+    "de-DE": {"inbound": "Hallo, {business_name}, wie kann ich Ihnen helfen?",
+             "outbound": "Hallo, ich rufe von {business_name} an, um Ihren Termin zu bestatigen."},
+    "it-IT": {"inbound": "Salve, {business_name}, come posso aiutarla?",
+             "outbound": "Salve, chiamo da {business_name} per confermare il suo appuntamento."},
+}
+
+
 def _first_messages(cfg: dict[str, Any], language: str) -> dict[str, str]:
     """Resolve first messages for a language, with PT-PT fallback.
 
-    Supports both the new `first_messages` dict and the legacy
-    `first_message_inbound`/`first_message_outbound` strings (auto-wrapped).
+    1) Se o nicho tem `first_messages` (dict idioma -> {inbound,outbound}), usa-o.
+    2) Senao usa aberturas genericas por idioma (_OPENINGS).
+    3) Ultimo recurso: legacy first_message_inbound/outbound (PT-PT).
     """
     fm = cfg.get("first_messages")
     if isinstance(fm, dict) and fm:
         lang = language if language in fm else "pt-PT"
         entry = fm.get(lang) or fm.get("pt-PT") or {}
         return {"inbound": entry.get("inbound", ""), "outbound": entry.get("outbound", "")}
-    # legacy fallback
+    if language in _OPENINGS:
+        return _OPENINGS[language]
+    # legacy fallback (PT-PT)
     return {
-        "inbound": cfg.get("first_message_inbound", "Olá, {business_name}, em que posso ajudar?"),
-        "outbound": cfg.get("first_message_outbound", "Olá, falo de {business_name}, estou a ligar para confirmar."),
+        "inbound": cfg.get("first_message_inbound", _OPENINGS["pt-PT"]["inbound"]),
+        "outbound": cfg.get("first_message_outbound", _OPENINGS["pt-PT"]["outbound"]),
     }
 
 
