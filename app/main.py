@@ -1,15 +1,15 @@
 """AutoPME Demo Studio — FastAPI entrypoint.
 
 Monta todos os routers:
-- /api/scenarios  (cenario por nicho)        — app.scenarios
-- /api/voice      (LiveKit call/start)        — app.voice   (lazy: pesado)
-- /api/whatsapp   (Baileys + ingestao)       — app.whatsapp
-- /               (dashboard single-page)    — app.dashboard
+- /api/scenarios  (cenario por nicho, multi-idioma)  — app.scenarios
+- /api/research   (pesquisa prospect na web)          — app.research
+- /api/voice      (voz modular: Vapi | browser)       — app.voice (providers)
+- /api/whatsapp   (Baileys + ingestao)               — app.whatsapp
+- /               (dashboard single-page)            — app.dashboard
 
-O agente de voz corre como WORKER SEPARADO: `python -m app.voice.main`
-(precisa de livekit-agents + livekit-api instalados). O FastAPI so expoe
-o endpoint /api/voice/call/start, importado de forma lazy para nao partir
-o arranque se as deps pesadas ainda nao estiverem instaladas.
+Voz: provider abstraido em app/voice/providers/. Vapi (web call, voz neural
+Azure) e ativo se VOICE_PROVIDER=vapi + chaves configuradas; senao browser
+(LLM + Web Speech API). Sem deps pesadas (livekit) no control-plane.
 """
 import logging
 
@@ -41,9 +41,7 @@ from app.research import research_router  # noqa: E402
 
 app.include_router(research_router)  # POST /api/research/prospect (pesquisa web)
 
-# Chat de voz simulado (LLM PT-PT, sem livekit) — sempre disponivel, mesmo na
-# imagem slim de deploy. O /api/voice/call/start (precisa de livekit) fica abaixo
-# no try/except.
+# Chat de voz (LLM multi-idioma) — usado pelo provider browser e como fallback.
 from app.voice.chat_router import chat_router  # noqa: E402
 
 app.include_router(chat_router)  # POST /api/voice/chat
@@ -52,15 +50,11 @@ from app.dashboard import dashboard_router  # noqa: E402
 
 app.include_router(dashboard_router)  # sem prefix: GET / serve o UI
 
-# --- Router de voz (lazy: livekit-agents/livekit-api podem nao estar instalados) ---
-try:
-    from app.voice import voice_router  # noqa: E402
+# --- Router de voz modular (Vapi | browser; sem deps pesadas) ---
+from app.voice import voice_router  # noqa: E402
 
-    app.include_router(voice_router)
-    logger.info("Voice router montado em /api/voice")
-except Exception as e:  # deps pesadas em falta
-    logger.warning("Voice router NAO montado (deps em falta): %s", e)
-    logger.warning("Instala: pip install livekit-agents livekit-api ; e arranca o worker: python -m app.voice.main")
+app.include_router(voice_router)  # /api/voice/call/start, /api/voice/providers, /api/voice/call/end
+logger.info("Voice router montado em /api/voice (provider: %s)", (settings.voice_provider or "vapi"))
 
 
 if __name__ == "__main__":

@@ -37,13 +37,16 @@ class VoiceChatRequest(BaseModel):
     niche: str = Field(default="dental")
     business_name: str = Field(default="Negocio")
     direction: str = Field(default="inbound", description="inbound | outbound")
+    language: str = Field(default="pt-PT", description="idioma (pt-PT, en-US, ...)")
+    free_context: str = Field(default="", description="bloco de texto livre para o system prompt")
+    extra: Optional[dict[str, Any]] = None
     history: list[ChatMessage] = Field(default_factory=list)
     user_message: Optional[str] = None
 
 
 @chat_router.post("/chat")
 async def voice_chat(req: VoiceChatRequest) -> dict[str, Any]:
-    """Simula um turno de chamada de voz (LLM PT-PT) ou devolve a abertura."""
+    """Simula um turno de chamada de voz (LLM, multi-idioma) ou devolve a abertura."""
     direction = (req.direction or "inbound").lower()
     if direction not in ("inbound", "outbound"):
         raise HTTPException(status_code=400, detail="direction deve ser 'inbound' ou 'outbound'")
@@ -51,7 +54,10 @@ async def voice_chat(req: VoiceChatRequest) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail=f"Nicho desconhecido: {req.niche}")
 
     try:
-        scenario = build_scenario(req.niche, req.business_name)
+        scenario = build_scenario(
+            req.niche, req.business_name, extra=req.extra,
+            language=req.language or "pt-PT", free_context=req.free_context,
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 

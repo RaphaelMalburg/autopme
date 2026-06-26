@@ -22,12 +22,21 @@ from app.scenarios.niches import NICHE_ORDER
 
 logger = logging.getLogger(__name__)
 
-_RESEARCH_SYSTEM = (
-    "Es um assistente que pesquisa negocios reais na web para preparar demonstracoes "
-    "de vendas para a AutoPME. Usas os resultados da pesquisa web para extrair informacoes "
-    "fatuais sobre o negocio pedido. Responde em portugues europeu. Se nao encontrares "
-    "informacao para um campo, usa null — nunca inventes dados."
-)
+_LANG_NAME = {
+    "pt-PT": "portugues europeu", "pt-BR": "portugues do Brasil", "en-US": "ingles",
+    "en-GB": "ingles britanico", "es-ES": "espanhol", "fr-FR": "frances",
+    "de-DE": "alemao", "it-IT": "italiano",
+}
+
+
+def _research_system(language: str) -> str:
+    lang_name = _LANG_NAME.get(language, _LANG_NAME["pt-PT"])
+    return (
+        f"Es um assistente que pesquisa negocios reais na web para preparar demonstracoes "
+        f"de vendas para a AutoPME. Usas os resultados da pesquisa web para extrair informacoes "
+        f"fatuais sobre o negocio pedido. O conteudo extraido e o scenario_extra devem estar em "
+        f"{lang_name}. Se nao encontrares informacao para um campo, usa null — nunca inventes dados."
+    )
 
 _RESEARCH_PROMPT = """Pesquisa na web informacoes sobre o seguinte negocio e extrai os dados estruturados em JSON.
 
@@ -86,12 +95,17 @@ def _safe_parse(raw: str) -> dict[str, Any]:
     return {}
 
 
-async def research_prospect(query: str, niche_hint: Optional[str] = None) -> dict[str, Any]:
-    """Pesquisa um prospect na web e devolve dados estruturados + `extra`.
+async def research_prospect(
+    query: str,
+    niche_hint: Optional[str] = None,
+    language: str = "pt-PT",
+) -> dict[str, Any]:
+    """Pesquisa um prospect na web e devolve dados estruturados + `extra` (multi-idioma).
 
     Returns:
         {
           "query": str,
+          "language": str,
           "extracted": {...},        # dados do negocio (sem scenario_extra)
           "extra": {...},            # opening_hours/services/prices/notes para o scenario builder
           "niche_guess": str | None, # niche detetado (um de NICHE_ORDER) ou None
@@ -105,7 +119,7 @@ async def research_prospect(query: str, niche_hint: Optional[str] = None) -> dic
         niches=niches,
     )
     messages = [
-        {"role": "system", "content": _RESEARCH_SYSTEM},
+        {"role": "system", "content": _research_system(language)},
         {"role": "user", "content": prompt},
     ]
     # Plugin `web` do OpenRouter: pesquisa Google via Exa, uma vez por pedido.
@@ -158,6 +172,7 @@ async def research_prospect(query: str, niche_hint: Optional[str] = None) -> dic
 
     return {
         "query": query,
+        "language": language,
         "extracted": extracted,
         "extra": extra_clean,
         "niche_guess": niche_guess,

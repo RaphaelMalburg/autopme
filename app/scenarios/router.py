@@ -29,6 +29,8 @@ class BuildRequest(BaseModel):
     niche: str
     business_name: str
     extra: BuildExtra | None = None
+    language: str = "pt-PT"
+    free_context: str = ""
 
 
 @router.get("/niches")
@@ -46,4 +48,7 @@ async def build_endpoint(req: BuildRequest) -> dict[str, Any]:
             detail=f"Nicho desconhecido: {req.niche}. Válidos: {list(NICHE_CONFIG.keys())}",
         )
     extra = req.extra.model_dump() if req.extra else None
-    return build_scenario(req.niche, req.business_name, extra=extra)
+    return build_scenario(
+        req.niche, req.business_name, extra=extra,
+        language=req.language or "pt-PT", free_context=req.free_context or "",
+    )

@@ -41,6 +41,28 @@ class Settings(BaseSettings):
     tts_engine: str = "piper"  # "piper" | "xtts"
     tts_voice: str = "pt-PT"   # voz Piper/XTTS pt-PT
 
+    # Azure Speech TTS (chave JA EXISTENTE — usada antes via Vapi).
+    # Opcional: se definido, o endpoint /api/voice/tts usa vozes neurais pt-PT
+    # (RaquelNeural/DuarteNeural) — muito melhor que a voz do browser.
+    # 500K chars/mes gratis. Se vazio, o dashboard usa a voz do browser.
+    azure_speech_key: Optional[str] = None
+    azure_speech_region: str = "westeurope"
+    azure_speech_voice: str = "pt-PT-RaquelNeural"  # RaquelNeural(F) | DuarteNeural(M) | FernandaNeural(F)
+
+    # Voz modular — provider abstraído (app/voice/providers/).
+    # VOICE_PROVIDER=vapi usa Vapi (voz neural Azure real); browser = fallback simulado.
+    # As chaves Vapi JA EXISTEM no agente-consultoria/.env (sem novos registos).
+    voice_provider: str = "vapi"  # "vapi" | "browser" (auto-fallback se faltar config)
+    voice_default_language: str = "pt-PT"
+    vapi_api_key: Optional[str] = None
+    vapi_public_key: Optional[str] = None  # Web SDK no browser (dashboard Vapi → API Keys → public)
+    vapi_assistant_id_outbound: Optional[str] = None
+    vapi_assistant_id_inbound: Optional[str] = None
+    vapi_phone_number_id: Optional[str] = None
+    vapi_webhook_secret: Optional[str] = None
+    vapi_voice_provider: str = "azure"  # provedor de voz dentro do Vapi (azure)
+    vapi_voice_id: str = "pt-PT-RaquelNeural"  # default; por idioma via provider
+
     # Demo
     default_niche: str = "dental"
 

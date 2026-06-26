@@ -21,16 +21,17 @@ research_router = APIRouter(prefix="/api/research", tags=["research"])
 class ProspectResearchRequest(BaseModel):
     query: str = Field(..., description="Nome do negocio + localizacao/website, ex.: 'Clinica Dentaria Sorriso Porto'")
     niche: Optional[str] = Field(default=None, description="Nicho sugerido (opcional)")
+    language: str = Field(default="pt-PT", description="idioma da extracao (pt-PT, en-US, ...)")
 
 
 @research_router.post("/prospect")
 async def research_prospect_endpoint(req: ProspectResearchRequest) -> dict[str, Any]:
-    """Pesquisa um prospect na web e devolve contexto 'mastigado' para a demo."""
+    """Pesquisa um prospect na web e devolve contexto 'mastigado' para a demo (multi-idioma)."""
     query = (req.query or "").strip()
     if not query:
         raise HTTPException(status_code=400, detail="Indique um termo de pesquisa (nome do negocio).")
     try:
-        result = await research_prospect(query=query, niche_hint=req.niche)
+        result = await research_prospect(query=query, niche_hint=req.niche, language=req.language or "pt-PT")
     except Exception as e:
         logger.error("research_prospect unexpected error: %s", e)
         raise HTTPException(status_code=502, detail=f"falha na pesquisa: {e}") from e

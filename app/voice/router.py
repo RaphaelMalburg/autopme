@@ -1,31 +1,25 @@
-"""Router FastAPI: POST /api/voice/call/start.
+"""Router de voz modular — delega no provider ativo (vapi | browser).
 
-Cria uma room no LiveKit Server local, faz dispatch do agente 'autopme-voice'
-para essa room (metadata JSON niche/business_name/direction) e devolve um token
-JWT para o dashboard se juntar como participante.
+Nao depende de livekit. POST /api/voice/call/start constroi o cenario por
+niche/idioma e inicia a chamada no provider ativo. GET /api/voice/providers
+expoe o estado (qual provider, o que falta). POST /api/voice/call/end termina.
 
-direction=inbound : o dashboard e o 'chamador'; ao juntar-se, o agente e
-  dispatchado e atende (abertura inbound).
-direction=outbound: o agente e dispatchado e inicia (abertura outbound); o
-  dashboard junta-se para 'atender'.
-
-Integracao em app/main.py (orquestrador):
+Montado em app/main.py:
     from app.voice import voice_router
     app.include_router(voice_router)
 """
 from __future__ import annotations
 
-import json
 import logging
-import uuid
+from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from livekit import api
-
 from app.config import settings
-from app.voice.constants import AGENT_NAME
+from app.scenarios.builder import build_scenario
+from app.scenarios.niches import get_niche_config
+from app.voice.providers import get_voice_provider, VoiceProviderError
 
 logger = logging.getLogger(__name__)
 
@@ -33,98 +27,76 @@ voice_router = APIRouter(prefix="/api/voice", tags=["voice"])
 
 
 class CallStartRequest(BaseModel):
-    niche: str = Field(default="dental", description="Nicho (ex: dental, restaurant, spa...)")
-    business_name: str = Field(default="Clinica Exemplo")
+    niche: str = Field(default="dental")
+    business_name: str = Field(default="Negocio")
     direction: str = Field(default="inbound", description="inbound | outbound")
+    language: str = Field(default="", description="idioma (pt-PT, en-US, ...). Vazio = default.")
+    extra: Optional[dict[str, Any]] = None
+    free_context: str = Field(default="", description="bloco de texto livre para o system prompt")
 
 
-class CallStartResponse(BaseModel):
-    room_name: str
-    token: str
-    ws_url: str
+@voice_router.get("/providers")
+async def providers_status() -> dict[str, Any]:
+    """Estado do(s) provider(s) de voz + qual esta ativo + o que falta."""
+    provider = get_voice_provider()
+    st = await provider.status()
+    st["requested"] = (settings.voice_provider or "vapi").lower()
+    return st
 
 
-def _http_api_url() -> str:
-    """livekit-api usa HTTP; settings.livekit_url usa ws://. Converter."""
-    url = settings.livekit_url
-    if url.startswith("ws://"):
-        return "http://" + url[len("ws://"):]
-    if url.startswith("wss://"):
-        return "https://" + url[len("wss://"):]
-    return url
-
-
-@voice_router.post("/call/start", response_model=CallStartResponse)
-async def call_start(req: CallStartRequest) -> CallStartResponse:
-    direction = req.direction.lower()
+@voice_router.post("/call/start")
+async def call_start(req: CallStartRequest) -> dict[str, Any]:
+    direction = (req.direction or "inbound").lower()
     if direction not in ("inbound", "outbound"):
-        raise HTTPException(
-            status_code=400, detail="direction deve ser 'inbound' ou 'outbound'"
-        )
+        raise HTTPException(status_code=400, detail="direction deve ser 'inbound' ou 'outbound'")
+    if get_niche_config(req.niche) is None:
+        raise HTTPException(status_code=400, detail=f"Nicho desconhecido: {req.niche}")
 
-    room_name = f"demo-{req.niche}-{uuid.uuid4().hex[:8]}"
-    metadata = json.dumps(
-        {
-            "niche": req.niche,
-            "business_name": req.business_name,
-            "direction": direction,
-        },
-        ensure_ascii=False,
-    )
+    language = (req.language or settings.voice_default_language or "pt-PT").strip()
 
-    lkapi = api.LiveKitAPI(
-        url=_http_api_url(),
-        api_key=settings.livekit_api_key,
-        api_secret=settings.livekit_api_secret,
-    )
     try:
-        try:
-            await lkapi.room.create_room(
-                api.CreateRoomRequest(name=room_name, empty_timeout=600)
-            )
-        except Exception as e:
-            # room pode ja existir; nao e fatal para o dispatch.
-            logger.warning("create_room (%s): %s", room_name, e)
-
-        # dispatch explicito do agente nomeado para a room. Best-effort:
-        # pode falhar se o LiveKit Server nao estiver acessivel a partir do
-        # backend (ex.: dashboard hospedado em cloud + servidor LiveKit local
-        # no portatil da demo). Nao e fatal: o token JWT continua valido
-        # contra qualquer servidor que partilhe o mesmo key/secret, e o agente
-        # local ira atender a room assim que o cliente (browser) se juntar.
-        try:
-            await lkapi.agent_dispatch.create_dispatch(
-                api.CreateAgentDispatchRequest(
-                    agent_name=AGENT_NAME,
-                    room=room_name,
-                    metadata=metadata,
-                )
-            )
-        except Exception as e:
-            logger.warning("create_dispatch (%s): %s (a continuar; token valido)", room_name, e)
-
-        # token para o dashboard se juntar como participante.
-        token = (
-            api.AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
-            .with_identity("dashboard")
-            .with_name("Dashboard")
-            .with_grants(
-                api.VideoGrants(
-                    room_join=True,
-                    room=room_name,
-                    can_publish=True,
-                    can_publish_data=True,
-                    can_subscribe=True,
-                )
-            )
-            .to_jwt()
+        scenario = build_scenario(
+            req.niche, req.business_name, extra=req.extra, language=language,
+            free_context=req.free_context,
         )
-    except Exception as e:
-        logger.error("call_start falhou: %s", e)
-        raise HTTPException(status_code=502, detail=f"falha ao criar chamada: {e}") from e
-    finally:
-        await lkapi.aclose()
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
-    return CallStartResponse(
-        room_name=room_name, token=token, ws_url=settings.livekit_url
+    system_prompt = scenario["system_prompt"]
+    first_message = (
+        scenario["first_message_outbound"] if direction == "outbound"
+        else scenario["first_message_inbound"]
     )
+
+    provider = get_voice_provider()
+    try:
+        result = await provider.start_call(
+            niche=req.niche,
+            business_name=req.business_name,
+            direction=direction,
+            language=language,
+            system_prompt=system_prompt,
+            first_message=first_message,
+            extra=req.extra,
+        )
+    except VoiceProviderError as e:
+        logger.error("call_start provider %s falhou: %s", provider.name, e)
+        raise HTTPException(status_code=502, detail=f"falha ao iniciar chamada: {e}") from e
+
+    result["niche"] = req.niche
+    result["business_name"] = req.business_name
+    result["direction"] = direction
+    result["language"] = language
+    result["first_message"] = first_message
+    return result
+
+
+class CallEndRequest(BaseModel):
+    call_ref: str = ""
+
+
+@voice_router.post("/call/end")
+async def call_end(req: CallEndRequest) -> dict[str, Any]:
+    """Termina uma chamada em curso (best-effort)."""
+    provider = get_voice_provider()
+    return await provider.end_call(req.call_ref)

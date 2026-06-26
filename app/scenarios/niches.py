@@ -1,17 +1,20 @@
 """Niche presets for the AutoPME Demo Studio.
 
 Ported and adapted from agente-consultoria/app/routers/webhooks_vapi.py (NICHE_CONFIG).
-Seven niches for PMEs in Porto, with European Portuguese (PT-PT) wording.
+Seven niches for PMEs in Porto. Multi-language (default PT-PT).
 
 Each niche config contains:
-- label: human-friendly PT-PT label for the dashboard.
+- label: human-friendly label for the dashboard.
 - role: the persona role spoken by the agent.
 - booking_term: generic term for an appointment/booking (used by the dashboard UI).
-- first_message_inbound / first_message_outbound: opening lines with {business_name}.
+- first_messages: dict language -> {inbound, outbound} opening lines with {business_name}.
+  Falls back to PT-PT if a language is missing.
 - booking_flow: step-by-step capture flow ("recolhe um dado de cada vez").
 - what_you_do: the "O QUE FAZES" section content.
+- niche_expertise: industry knowledge, common questions, objections, upsell, tone
+  (incorporated into the system prompt to make the agent more domain-savvy).
 - capture_tool_desc: description for the captureAppointment tool.
-- capture_fields: dict of field name -> PT-PT label (consistent keys across niches:
+- capture_fields: dict of field name -> label (consistent keys across niches:
   callerName, callerPhone, preferredDateTime, reason).
 - example_knowledge: a realistic knowledge block used when no `extra` is provided,
   so the demo can start without any input.
@@ -21,7 +24,7 @@ from typing import Any
 
 
 def _knowledge(*body: str) -> str:
-    """Wrap business-knowledge body lines in the standard PT-PT knowledge block."""
+    """Wrap business-knowledge body lines in the standard knowledge block (PT-PT)."""
     return "\n".join([
         "=== CONHECIMENTO DO NEGÓCIO ===",
         "Usa APENAS estas informações para responder. Se a pergunta não está coberta aqui, "
@@ -30,6 +33,16 @@ def _knowledge(*body: str) -> str:
         *body,
         "=== FIM DO CONHECIMENTO ===",
     ])
+
+
+# Helper: build first_messages dict with PT-PT default + EN fallback for all niches.
+def _fm(pt_in: str, pt_out: str, en_in: str = "", en_out: str = "") -> dict[str, dict[str, str]]:
+    en_in = en_in or pt_in.replace("Olá", "Hello").replace("em que posso ajudar?", "how can I help?")
+    en_out = en_out or pt_out.replace("Olá, falo de", "Hello, I'm calling from")
+    return {
+        "pt-PT": {"inbound": pt_in, "outbound": pt_out},
+        "en-US": {"inbound": en_in, "outbound": en_out},
+    }
 
 
 NICHE_CONFIG: dict[str, dict[str, Any]] = {
@@ -58,6 +71,19 @@ NICHE_CONFIG: dict[str, dict[str, Any]] = {
             "Depois usa a ferramenta captureAppointment para registar.\n"
             "4. Se a pessoa quer falar com alguém específico ou tem um assunto fora do teu alcance, "
             "diz que vais passar a mensagem e alguém liga de volta.\n"
+        ),
+        "niche_expertise": (
+            "## ESPECIALIDADE: CLÍNICA DENTÁRIA\n"
+            "Conhecimento de indústria: clientes preocupam-se com dor, custo, urgência e higiene. "
+            "Perguntas frequentes: quanto custa uma limpeza? atendem seguros de saúde? há estacionamento? "
+            "fazem tratamento de canal?\n"
+            "Objeções comuns: 'é caro' — oferece orçamento gratuito e phased; 'tenho medo' — tranquiliza "
+            "com a equipa experiente e técnicas indolores.\n"
+            "Upsell natural: após limpeza, sugerir avaliação de branqueamento ou revisão; após implante, "
+            "lembrar manutenção.\n"
+            "Tom: acolhedor, calmo (muitos clientes têm ansiedade dental), empressivo com urgências.\n"
+            "NUNCA dês aconselhamento clínico específico — recolhe o motivo e marca; questões clínicas "
+            "detalhadas vão para o dentista."
         ),
         "capture_tool_desc": "Registar um pedido de consulta. Usa APENAS depois de teres nome, telefone, data/hora e motivo.",
         "capture_fields": {

@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AutoPME Demo Studio</title>
+  <!-- Vapi Web SDK (carregado so se o provider ativo for Vapi; ver JS) -->
+  <script src="https://cdn.jsdelivr.net/npm/@vapi-ai/web@latest/dist/index.global.js"></script>
   <style>
     :root {
       --bg: #0f1115;
@@ -156,7 +158,7 @@
     <div class="logo">A</div>
     <div>
       <h1>AutoPME Demo Studio</h1>
-      <div class="sub">Demo presencial · automação para PMEs no Porto · corre 100% local</div>
+      <div class="sub">Demo presencial · automação para PMEs no Porto · multi-idioma · voz Vapi</div>
     </div>
   </header>
 
@@ -176,7 +178,18 @@
       </div>
       <div class="grid">
         <div>
-          <label for="niche">Nicho (7)</label>
+          <label for="language">Idioma da demo</label>
+          <select id="language">
+            <option value="pt-PT">Português (Portugal)</option>
+            <option value="pt-BR">Português (Brasil)</option>
+            <option value="en-US">English (US)</option>
+            <option value="en-GB">English (UK)</option>
+            <option value="es-ES">Español</option>
+            <option value="fr-FR">Français</option>
+            <option value="de-DE">Deutsch</option>
+            <option value="it-IT">Italiano</option>
+          </select>
+          <label for="niche">Nicho (auto-preenchido pela pesquisa)</label>
           <select id="niche"><option value="">A carregar nichos…</option></select>
           <label for="business_name">Nome do negócio</label>
           <input id="business_name" type="text" placeholder="Ex.: Clínica Dentária Exemplo" />
@@ -192,10 +205,14 @@
           <input id="extra_notes" type="text" placeholder="Notas extra (opcional)" />
         </div>
       </div>
+      <label for="free_context" style="margin-top:10px;">Contexto adicional (bloco livre — entra no prompt do agente)</label>
+      <textarea id="free_context" placeholder="Cole aqui notas do prospect, dor que ele descreveu, objetivos, concorrência, qualquer contexto que o agente deva usar…"></textarea>
       <div class="btnrow">
         <button id="btn-load">Carregar demo</button>
+        <button id="btn-clear" class="ghost">Limpar campos</button>
         <span class="note" id="config-status"></span>
       </div>
+      <div class="note" id="provider-status" style="margin-top:10px;"></div>
     </section>
 
     <!-- Seletor de cenário -->
@@ -401,9 +418,13 @@
       }
     }
 
+    function currentLanguage() { return $("language").value || "pt-PT"; }
+    function currentFreeContext() { return $("free_context").value.trim(); }
+
     async function loadDemo() {
       const niche = $("niche").value;
       const business_name = $("business_name").value.trim();
+      const language = currentLanguage();
       if (!niche) { setErr($("config-status"), "Escolha um nicho."); return; }
       if (!business_name) { setErr($("config-status"), "Indique o nome do negócio."); return; }
       const extra = {
@@ -415,14 +436,44 @@
       const st = $("config-status");
       st.textContent = "A carregar demo…"; st.className = "note";
       try {
-        const built = await apiPost("/api/scenarios/build", { niche, business_name, extra });
+        const built = await apiPost("/api/scenarios/build", { niche, business_name, extra, language });
         state.built = built;
-        state.config = { niche, business_name, extra };
+        state.config = { niche, business_name, extra, language, free_context: currentFreeContext() };
         const term = bookingTermFor(niche);
-        setOk(st, "Demo carregada para «" + business_name + "» (termo: " + term + ").");
+        setOk(st, "Demo carregada para «" + business_name + "» (" + language + ", termo: " + term + ").");
       } catch (e) {
         setErr(st, "Erro ao carregar demo: " + e.message);
       }
+    }
+
+    function clearFields() {
+      ["research-query", "business_name", "extra_opening", "extra_services", "extra_prices", "extra_notes", "free_context"].forEach((id) => { const el = $(id); if (el) el.value = ""; });
+      const sel = $("niche"); if (sel && state.niches.length) sel.value = state.niches[0].id;
+      const lang = $("language"); if (lang) lang.value = "pt-PT";
+      setOk($("config-status"), "Campos limpos.");
+      setErr($("research-status"), "");
+      state.built = null; state.config = null;
+    }
+
+    async function loadProviderStatus() {
+      try {
+        const r = await apiGet("/api/voice/providers");
+        const el = $("provider-status");
+        if (r.provider === "vapi" && r.available) {
+          el.innerHTML = "🔊 Voz: <b>Vapi</b> (neural Azure, " + (r.language || currentLanguage()) + "). Web call no browser.";
+          el.className = "note";
+        } else if (r.provider === "vapi" && !r.available) {
+          el.innerHTML = "🔊 Voz: <b>browser</b> (fallback). Vapi configurado mas falta: " + (r.missing || []).join(", ") + ".";
+          el.className = "note";
+        } else {
+          el.innerHTML = "🔊 Voz: <b>browser</b> (simulada). " + (r.note || "");
+          el.className = "note";
+        }
+        state.voiceProvider = r.provider;
+        state.voiceAvailable = !!r.available;
+        state.voicePublicKey = r.public_key || null;
+        state.voiceLanguages = r.languages || [];
+      } catch (e) { /* nao critico */ }
     }
 
     // ---- Pesquisar prospect na web -----------------------------------------
@@ -432,7 +483,7 @@
       if (!query) { setErr(st, "Indique o nome do negócio (e localização, se possível)."); return; }
       st.textContent = "A pesquisar na web…"; st.className = "note";
       try {
-        const r = await apiPost("/api/research/prospect", { query, niche: $("niche").value || null });
+        const r = await apiPost("/api/research/prospect", { query, niche: $("niche").value || null, language: currentLanguage() });
         const ex = r.extracted || {};
         const extra = r.extra || {};
         if (ex.nome_negocio) $("business_name").value = ex.nome_negocio;
@@ -575,21 +626,68 @@
       }
     }
 
+    function vapiSdkAvailable() { return typeof window.Vapi !== "undefined"; }
+
     async function startVoiceCall(direction) {
       if (!requireConfig()) return;
       const key = direction === "outbound" ? "out" : "in";
       if (callState[key].active) { alert("Já existe uma chamada ativa neste painel."); return; }
-      callState[key] = { active: true, history: [], rec: null };
       const trId = "transcript-" + key;
+      const badge = $("call-state-" + key);
+
+      // Provider Vapi: voz neural Azure real via web call no browser.
+      if (state.voiceProvider === "vapi" && state.voiceAvailable && vapiSdkAvailable() && state.voicePublicKey) {
+        callState[key] = { active: true, history: [], rec: null, vapi: null, callRef: null };
+        $(trId).innerHTML = '<span class="note">A iniciar chamada Vapi…</span>';
+        setCallUI(key, true);
+        badge.textContent = "A ligar (Vapi)…"; badge.className = "badge warn";
+        try {
+          const r = await apiPost("/api/voice/call/start", {
+            niche: state.config.niche,
+            business_name: state.config.business_name,
+            direction: direction,
+            language: state.config.language || currentLanguage(),
+            extra: state.config.extra,
+            free_context: state.config.free_context || "",
+          });
+          callState[key].callRef = r.call_ref || r.call_id || null;
+          // Junta-se à web call via Vapi Web SDK com a public key + assistantId.
+          const v = new Vapi(state.voicePublicKey);
+          callState[key].vapi = v;
+          v.on("call-start", () => { badge.textContent = "Em chamada"; badge.className = "badge ok"; $(trId).innerHTML = ""; });
+          v.on("call-end", () => { stopCall(key); });
+          v.on("message", (msg) => {
+            // Transcrição live (Vapi envia transcript updates em message.type transcript).
+            if (msg && msg.type === "transcript") {
+              const role = msg.role === "assistant" ? "agent" : "user";
+              appendTranscript(trId, role, msg.transcript || msg.content || "", Date.now());
+            }
+          });
+          v.on("error", (e) => { setErr($("room-info-" + key), "Vapi: " + (e && e.message ? e.message : e)); });
+          v.start(r.assistant_id || undefined);
+        } catch (e) {
+          badge.textContent = "Erro"; badge.className = "badge err";
+          setErr($("room-info-" + key), "Falha ao iniciar Vapi: " + e.message + " (a tentar modo browser…)");
+          stopCall(key);
+          // Fallback automatico para o modo browser.
+          state.voiceProvider = "browser";
+          startVoiceCall(direction);
+        }
+        return;
+      }
+
+      // Provider browser: LLM + Web Speech API (fallback).
+      callState[key] = { active: true, history: [], rec: null, vapi: null, callRef: null };
       $(trId).innerHTML = '<span class="note">A iniciar chamada…</span>';
       setCallUI(key, true);
-      const badge = $("call-state-" + key);
       badge.textContent = "A ligar…"; badge.className = "badge warn";
       try {
         const r = await apiPost("/api/voice/chat", {
           niche: state.config.niche,
           business_name: state.config.business_name,
           direction: direction,
+          language: state.config.language || currentLanguage(),
+          free_context: state.config.free_context || "",
           history: [],
         });
         callState[key].history = r.history;
@@ -604,7 +702,12 @@
       }
     }
 
-    function hangUp(key) { stopCall(key); }
+    function hangUp(key) {
+      // Vapi: termina a web call via SDK + endpoint.
+      if (callState[key].vapi) { try { callState[key].vapi.stop(); } catch (e) {} }
+      if (callState[key].callRef) { apiPost("/api/voice/call/end", { call_ref: callState[key].callRef }).catch(() => {}); }
+      stopCall(key);
+    }
 
     // ---- WhatsApp FAQ --------------------------------------------------------
     async function refreshWhatsAppQR() {
@@ -726,6 +829,7 @@
             niche: state.config.niche,
             business_name: state.config.business_name,
             extra: state.config.extra,
+            language: state.config.language || currentLanguage(),
           });
           state.built = built;
         } catch (e) {
@@ -775,7 +879,9 @@
     // ---- Bindings ------------------------------------------------------------
     document.addEventListener("DOMContentLoaded", () => {
       loadNiches();
+      loadProviderStatus();
       $("btn-load").addEventListener("click", loadDemo);
+      $("btn-clear").addEventListener("click", clearFields);
       $("btn-research").addEventListener("click", researchProspect);
       $("research-query").addEventListener("keydown", (e) => { if (e.key === "Enter") researchProspect(); });
       document.querySelectorAll(".scn-btn").forEach((b) =>
