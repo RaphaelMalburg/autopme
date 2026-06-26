@@ -1,0 +1,15 @@
+services:
+  livekit:
+    image: livekit/livekit-server:latest
+    command: --config /etc/livekit.yaml --node-id=devnode
+    ports:
+      - "7880:7880"   # signaling (HTTP/WS)
+      - "7881:7881"   # RTC over TCP
+      - "7882:7882/udp"  # RTC over UDP
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+      - ./livekit_data:/var/lib/livekit
+    restart: unless-stopped
+
+# livekit.yaml (criado no repo raiz) define api_key/api_secret locais.
+# Nao precisa de conta cloud — o servidor auto-gera/serva com devkey/secret em dev.

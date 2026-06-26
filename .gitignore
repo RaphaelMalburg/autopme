@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.hypothesis/
+
+# Env / secrets
+.env
+.env.local
+*.secret
+
+# Data
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Baileys auth state (WhatsApp session)
+baileys_auth/
+auth_info_baileys/
+
+# LiveKit local
+livekit_data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

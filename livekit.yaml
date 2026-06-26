@@ -1,0 +1,17 @@
+port: 7880
+bind_addresses:
+  - "0.0.0.0"
+rtc:
+  tcp_port: 7881
+  port_range_start: 50000
+  port_range_end: 60000
+  use_external_ip: true
+keys:
+  # Em dev, usar estes valores no .env (LIVEKIT_API_KEY / LIVEKIT_API_SECRET).
+  # O LiveKit Server auto-serva com estes; nao precisa de conta cloud.
+  devkey: secret
+logging:
+  level: info
+room:
+  auto_create: true
+  enable_remote_unmute: true
