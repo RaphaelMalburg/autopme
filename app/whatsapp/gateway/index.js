@@ -26,9 +26,11 @@ const {
   downloadContentFromMessage,
 } = require('baileys');
 
-const PORT = parseInt(process.env.GATEWAY_PORT || '3001', 10);
+const PORT = parseInt(process.env.PORT || process.env.GATEWAY_PORT || '3001', 10);
 const APP_WEBHOOK = process.env.APP_WEBHOOK_URL || 'http://localhost:8000/api/whatsapp/webhook';
-const AUTH_DIR = path.join(__dirname, 'baileys_auth');
+// AUTH_DIR override permite montar um volume persistente em cloud (ex.: /data/baileys_auth)
+// para a sessao WhatsApp nao se perder a cada redeploy.
+const AUTH_DIR = process.env.AUTH_DIR || path.join(__dirname, 'baileys_auth');
 
 const app = express();
 app.use(express.json({ limit: '64mb' }));

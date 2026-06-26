@@ -25,7 +25,7 @@ from pydantic import BaseModel, Field
 from livekit import api
 
 from app.config import settings
-from app.voice.agent import AGENT_NAME
+from app.voice.constants import AGENT_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -86,14 +86,22 @@ async def call_start(req: CallStartRequest) -> CallStartResponse:
             # room pode ja existir; nao e fatal para o dispatch.
             logger.warning("create_room (%s): %s", room_name, e)
 
-        # dispatch explicito do agente nomeado para a room.
-        await lkapi.agent_dispatch.create_dispatch(
-            api.CreateAgentDispatchRequest(
-                agent_name=AGENT_NAME,
-                room=room_name,
-                metadata=metadata,
+        # dispatch explicito do agente nomeado para a room. Best-effort:
+        # pode falhar se o LiveKit Server nao estiver acessivel a partir do
+        # backend (ex.: dashboard hospedado em cloud + servidor LiveKit local
+        # no portatil da demo). Nao e fatal: o token JWT continua valido
+        # contra qualquer servidor que partilhe o mesmo key/secret, e o agente
+        # local ira atender a room assim que o cliente (browser) se juntar.
+        try:
+            await lkapi.agent_dispatch.create_dispatch(
+                api.CreateAgentDispatchRequest(
+                    agent_name=AGENT_NAME,
+                    room=room_name,
+                    metadata=metadata,
+                )
             )
-        )
+        except Exception as e:
+            logger.warning("create_dispatch (%s): %s (a continuar; token valido)", room_name, e)
 
         # token para o dashboard se juntar como participante.
         token = (

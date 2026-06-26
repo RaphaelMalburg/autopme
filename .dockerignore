@@ -1,0 +1,15 @@
+# Build leve da imagem do control-plane (Python). Exclui segredos, node, ML.
+.git
+.gitignore
+.env
+.env.*
+*.md
+docker-compose.yml
+livekit.yaml
+.venv
+venv
+**/__pycache__
+**/*.pyc
+**/node_modules
+app/whatsapp/gateway
+autopme-demo-studio-*

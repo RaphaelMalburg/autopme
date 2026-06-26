@@ -1,0 +1,6 @@
+node_modules
+baileys_auth
+npm-debug.log*
+.git
+.gitignore
+*.md

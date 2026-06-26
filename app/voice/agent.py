@@ -49,7 +49,7 @@ from app.voice.tts_piper import PiperTTS
 
 logger = logging.getLogger("autopme-voice")
 
-AGENT_NAME = "autopme-voice"
+from app.voice.constants import AGENT_NAME  # noqa: E402  (fonte unica)
 
 server = AgentServer()
 

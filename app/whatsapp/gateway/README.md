@@ -26,8 +26,10 @@ Linked devices > Link a device** and scan it. The session is persisted in
 
 | Variable         | Default                                          | Purpose                                  |
 |------------------|--------------------------------------------------|------------------------------------------|
-| `GATEWAY_PORT`   | `3001`                                           | REST port the Python client talks to.    |
-| `APP_WEBHOOK_URL`| `http://localhost:8000/api/whatsapp/webhook`     | Where incoming messages are forwarded.   |
+| `PORT`           | _(Railway injeta)_ senao cai em `GATEWAY_PORT`   | Porta HTTP (precedencia: PORT > GATEWAY_PORT > 3001). |
+| `GATEWAY_PORT`   | `3001`                                           | Porta REST alternativa (local).          |
+| `APP_WEBHOOK_URL`| `http://localhost:8000/api/whatsapp/webhook`     | Para onde as mensagens recebidas sao reencaminhadas. |
+| `AUTH_DIR`       | `./baileys_auth`                                 | Pasta da sessao; em cloud usar um volume persistente (ex.: `/data/baileys_auth`). |
 
 ## REST API
 
