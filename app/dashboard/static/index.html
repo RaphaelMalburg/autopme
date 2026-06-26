@@ -4,8 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AutoPME Demo Studio</title>
-  <!-- LiveKit Web SDK via CDN (UMD global: LivekitClient) -->
-  <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
   <style>
     :root {
       --bg: #0f1115;
@@ -166,6 +164,16 @@
     <!-- Configuração da visita -->
     <section class="card" id="config-card">
       <h2>1 · Configurar visita</h2>
+      <div class="row2" style="margin-bottom:12px;">
+        <div>
+          <label for="research-query">Pesquisar prospect na web (opcional)</label>
+          <input id="research-query" type="text" placeholder="Ex.: Clínica Dentária Sorriso, Porto" />
+        </div>
+        <div style="display:flex; align-items:flex-end; gap:8px;">
+          <button id="btn-research">Pesquisar e preencher</button>
+          <span class="note" id="research-status"></span>
+        </div>
+      </div>
       <div class="grid">
         <div>
           <label for="niche">Nicho (7)</label>
@@ -209,10 +217,15 @@
           <button id="btn-call-in">Ligar para o agente</button>
           <button id="btn-hang-in" class="danger" disabled>Desligar</button>
           <span class="badge" id="call-state-in">Desligado</span>
+          <button id="btn-mic-in" class="ghost" disabled>🎤 Falar</button>
         </div>
-        <div class="note" id="room-info-in"></div>
+        <div class="note" id="room-info-in">Chamada simulada no browser: o agente fala (áudio) e ouve o seu microfone. Sem LiveKit. Se o microfone não estiver disponível, escreva abaixo.</div>
         <h3>Transcrição ao vivo</h3>
         <div class="transcript" id="transcript-in"><span class="note">Sem transcrição ainda.</span></div>
+        <div class="btnrow" style="margin-top:10px;">
+          <input id="call-text-in" type="text" placeholder="Ou escreva a sua resposta…" style="flex:1;" />
+          <button id="btn-send-in" class="secondary" disabled>Enviar</button>
+        </div>
       </div>
 
       <!-- Painel: Voz Outbound -->
@@ -220,12 +233,17 @@
         <h3>Voz Outbound · o agente liga para si</h3>
         <div class="btnrow">
           <button id="btn-call-out">Agente liga para mim</button>
-          <button id="btn-hang-out" class="danger" disabled>Atender / Desligar</button>
+          <button id="btn-hang-out" class="danger" disabled>Desligar</button>
           <span class="badge" id="call-state-out">Desligado</span>
+          <button id="btn-mic-out" class="ghost" disabled>🎤 Falar</button>
         </div>
-        <div class="note" id="room-info-out"></div>
+        <div class="note" id="room-info-out">Chamada simulada no browser: o agente fala (áudio) e ouve o seu microfone. Sem LiveKit. Se o microfone não estiver disponível, escreva abaixo.</div>
         <h3>Transcrição ao vivo</h3>
         <div class="transcript" id="transcript-out"><span class="note">Sem transcrição ainda.</span></div>
+        <div class="btnrow" style="margin-top:10px;">
+          <input id="call-text-out" type="text" placeholder="Ou escreva a sua resposta…" style="flex:1;" />
+          <button id="btn-send-out" class="secondary" disabled>Enviar</button>
+        </div>
       </div>
 
       <!-- Painel: WhatsApp FAQ -->
@@ -407,6 +425,32 @@
       }
     }
 
+    // ---- Pesquisar prospect na web -----------------------------------------
+    async function researchProspect() {
+      const query = $("research-query").value.trim();
+      const st = $("research-status");
+      if (!query) { setErr(st, "Indique o nome do negócio (e localização, se possível)."); return; }
+      st.textContent = "A pesquisar na web…"; st.className = "note";
+      try {
+        const r = await apiPost("/api/research/prospect", { query, niche: $("niche").value || null });
+        const ex = r.extracted || {};
+        const extra = r.extra || {};
+        if (ex.nome_negocio) $("business_name").value = ex.nome_negocio;
+        if (extra.opening_hours) $("extra_opening").value = extra.opening_hours;
+        if (extra.services) $("extra_services").value = extra.services;
+        if (extra.prices) $("extra_prices").value = extra.prices;
+        if (extra.notes) $("extra_notes").value = extra.notes;
+        if (r.niche_guess) {
+          const sel = $("niche");
+          for (const opt of sel.options) { if (opt.value === r.niche_guess) { sel.value = r.niche_guess; break; } }
+        }
+        const found = ex.nome_negocio ? "«" + ex.nome_negocio + "»" : "o negócio";
+        setOk(st, "Contexto preenchido para " + found + ". Verifique os campos e carregue a demo.");
+      } catch (e) {
+        setErr(st, "Erro na pesquisa: " + e.message);
+      }
+    }
+
     // ---- 2) Seletor de cenário ----------------------------------------------
     function selectScenario(scn) {
       document.querySelectorAll(".scn-btn").forEach((b) =>
@@ -416,9 +460,45 @@
       if (scn === "whatsapp") refreshWhatsAppQR();
     }
 
-    // ---- LiveKit: juntar-se à room + transcrição ----------------------------
-    function livekitAvailable() {
-      return typeof window.LivekitClient !== "undefined";
+    // ---- Voz simulada (Web Speech API + LLM PT-PT, sem LiveKit) ------------
+    // Estado por painel: { active, history, rec }
+    const callState = { in: { active: false, history: [], rec: null }, out: { active: false, history: [], rec: null } };
+    let ptVoice = null;
+
+    function loadPtVoice() {
+      try {
+        const voices = window.speechSynthesis.getVoices() || [];
+        ptVoice = voices.find((v) => /pt(-|_)?PT/i.test(v.lang)) ||
+                  voices.find((v) => /^pt/i.test(v.lang)) || null;
+      } catch (e) { ptVoice = null; }
+    }
+    if ("speechSynthesis" in window) {
+      loadPtVoice();
+      window.speechSynthesis.onvoiceschanged = loadPtVoice;
+    }
+
+    function speak(text, onend) {
+      if (!("speechSynthesis" in window) || !text) { if (onend) onend(); return; }
+      try { window.speechSynthesis.cancel(); } catch (e) {}
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "pt-PT";
+      if (ptVoice) u.voice = ptVoice;
+      u.rate = 1.0;
+      u.onend = () => { if (onend) onend(); };
+      u.onerror = () => { if (onend) onend(); };
+      try { window.speechSynthesis.speak(u); } catch (e) { if (onend) onend(); }
+    }
+
+    function recognitionSupported() {
+      return typeof window.SpeechRecognition !== "undefined" || typeof window.webkitSpeechRecognition !== "undefined";
+    }
+    function newRecognition() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const r = new SR();
+      r.lang = "pt-PT";
+      r.interimResults = false;
+      r.maxAlternatives = 1;
+      return r;
     }
 
     function appendTranscript(containerId, role, content, ts) {
@@ -436,82 +516,95 @@
       el.scrollTop = el.scrollHeight;
     }
 
-    function onTrackSubscribed(track /*, publication, participant */) {
-      // Anexar áudio remoto (voz do agente) ao documento.
+    function setCallUI(key, active) {
+      const dir = key === "out" ? "out" : "in";
+      $("btn-call-" + dir).disabled = active;
+      $("btn-hang-" + dir).disabled = !active;
+      $("btn-send-" + dir).disabled = !active;
+      $("btn-mic-" + dir).disabled = !active || !recognitionSupported();
+      const badge = $("call-state-" + dir);
+      badge.textContent = active ? "Em chamada" : "Desligado";
+      badge.className = "badge " + (active ? "ok" : "");
+    }
+
+    function stopCall(key) {
+      callState[key].active = false;
+      try { if (callState[key].rec) callState[key].rec.stop(); } catch (e) {}
+      callState[key].rec = null;
+      try { window.speechSynthesis.cancel(); } catch (e) {}
+      setCallUI(key, false);
+    }
+
+    function listenOnce(key) {
+      if (!callState[key].active || !recognitionSupported()) return;
+      const rec = newRecognition();
+      callState[key].rec = rec;
+      rec.onresult = (ev) => { const text = ev.results[0][0].transcript; sendUserTurn(key, text); };
+      rec.onerror = () => { /* mantem a chamada; o utilizador pode escrever */ };
+      rec.onend = () => { callState[key].rec = null; };
+      try { rec.start(); } catch (e) { callState[key].rec = null; }
+    }
+
+    function speakThenListen(key, text) {
+      speak(text, () => { if (callState[key].active) listenOnce(key); });
+    }
+
+    async function sendUserTurn(key, text) {
+      text = (text || "").trim();
+      if (!text || !callState[key].active) return;
+      const trId = "transcript-" + key;
+      appendTranscript(trId, "user", text, Date.now());
+      const dir = key === "out" ? "outbound" : "inbound";
+      const badge = $("call-state-" + key);
+      badge.textContent = "A pensar…"; badge.className = "badge warn";
       try {
-        if (track.kind === LivekitClient.Track.Kind.Audio) {
-          const el = track.attach();
-          if (el) { el.style.display = "none"; document.body.appendChild(el); }
-        }
-      } catch (e) { /* ignore */ }
+        const r = await apiPost("/api/voice/chat", {
+          niche: state.config.niche,
+          business_name: state.config.business_name,
+          direction: dir,
+          history: callState[key].history,
+          user_message: text,
+        });
+        callState[key].history = r.history;
+        appendTranscript(trId, "agent", r.reply, Date.now());
+        badge.textContent = "Em chamada"; badge.className = "badge ok";
+        speakThenListen(key, r.reply);
+      } catch (e) {
+        badge.textContent = "Erro"; badge.className = "badge err";
+        setErr($("room-info-" + key), "Falha no agente: " + e.message);
+      }
     }
 
     async function startVoiceCall(direction) {
       if (!requireConfig()) return;
-      if (!livekitAvailable()) {
-        alert("O SDK LiveKit não carregou (CDN). Verifique a ligação à internet.");
-        return;
-      }
       const key = direction === "outbound" ? "out" : "in";
-      const btnCall = $("btn-call-" + (direction === "outbound" ? "out" : "in"));
-      const btnHang = $("btn-hang-" + key);
-      const stateBadge = $("call-state-" + key);
-      const info = $("room-info-" + key);
+      if (callState[key].active) { alert("Já existe uma chamada ativa neste painel."); return; }
+      callState[key] = { active: true, history: [], rec: null };
       const trId = "transcript-" + key;
-
-      if (state.rooms[key]) { alert("Já existe uma chamada ativa."); return; }
-      btnCall.disabled = true;
-      stateBadge.textContent = "A iniciar…"; stateBadge.className = "badge warn";
-      setErr(info, "");
+      $(trId).innerHTML = '<span class="note">A iniciar chamada…</span>';
+      setCallUI(key, true);
+      const badge = $("call-state-" + key);
+      badge.textContent = "A ligar…"; badge.className = "badge warn";
       try {
-        const r = await apiPost("/api/voice/call/start", {
+        const r = await apiPost("/api/voice/chat", {
           niche: state.config.niche,
           business_name: state.config.business_name,
           direction: direction,
+          history: [],
         });
-        info.innerHTML = "Room: <b>" + (r.room_name || "?") + "</b> · ws: <b>" + (r.ws_url || "?") + "</b>";
-        stateBadge.textContent = "A juntar-se à room…"; stateBadge.className = "badge warn";
-        const room = new LivekitClient.Room({ adaptiveStream: true, dynacast: true });
-        room.on(LivekitClient.RoomEvent.DataReceived, (payload /*, participant, kind, topic*/) => {
-          let text; try { text = new TextDecoder().decode(payload); } catch (e) { return; }
-          let msg; try { msg = JSON.parse(text); } catch (e) { return; }
-          if (msg && msg.type === "transcript") {
-            appendTranscript(trId, msg.role, msg.content, msg.ts);
-          }
-        });
-        room.on(LivekitClient.RoomEvent.TrackSubscribed, onTrackSubscribed);
-        room.on(LivekitClient.RoomEvent.Disconnected, () => {
-          stateBadge.textContent = "Desligado"; stateBadge.className = "badge";
-          btnCall.disabled = false; btnHang.disabled = true;
-          state.rooms[key] = null;
-        });
-        // Alguns browsers (Safari/iOS) exigem um clique para reproduzir áudio.
-        room.on(LivekitClient.RoomEvent.AudioPlaybackStatusChanged, () => {
-          if (!room.canPlaybackAudio) {
-            const btn = document.createElement("button");
-            btn.textContent = "Ativar som"; btn.className = "secondary";
-            btn.onclick = async () => { try { await room.startAudio(); btn.remove(); } catch (e) {} };
-            info.appendChild(btn);
-          }
-        });
-        await room.connect(r.ws_url, r.token);
-        // Publicar microfone local (o utilizador fala com o agente).
-        try { await room.localParticipant.setMicrophoneEnabled(true); }
-        catch (e) { /* microfone pode ser recusado; a chamada ainda decorre */ }
-        state.rooms[key] = room;
-        stateBadge.textContent = "Em chamada"; stateBadge.className = "badge ok";
-        btnHang.disabled = false;
+        callState[key].history = r.history;
+        $(trId).innerHTML = "";
+        appendTranscript(trId, "agent", r.reply, Date.now());
+        badge.textContent = "Em chamada"; badge.className = "badge ok";
+        speakThenListen(key, r.reply);
       } catch (e) {
-        stateBadge.textContent = "Erro"; stateBadge.className = "badge err";
-        setErr(info, "Falha ao iniciar chamada: " + e.message);
-        btnCall.disabled = false;
+        badge.textContent = "Erro"; badge.className = "badge err";
+        setErr($("room-info-" + key), "Falha ao iniciar: " + e.message);
+        stopCall(key);
       }
     }
 
-    function hangUp(key) {
-      const room = state.rooms[key];
-      if (room) { try { room.disconnect(); } catch (e) {} }
-    }
+    function hangUp(key) { stopCall(key); }
 
     // ---- WhatsApp FAQ --------------------------------------------------------
     async function refreshWhatsAppQR() {
@@ -683,12 +776,25 @@
     document.addEventListener("DOMContentLoaded", () => {
       loadNiches();
       $("btn-load").addEventListener("click", loadDemo);
+      $("btn-research").addEventListener("click", researchProspect);
+      $("research-query").addEventListener("keydown", (e) => { if (e.key === "Enter") researchProspect(); });
       document.querySelectorAll(".scn-btn").forEach((b) =>
         b.addEventListener("click", () => selectScenario(b.dataset.scn)));
       $("btn-call-in").addEventListener("click", () => startVoiceCall("inbound"));
       $("btn-hang-in").addEventListener("click", () => hangUp("in"));
       $("btn-call-out").addEventListener("click", () => startVoiceCall("outbound"));
       $("btn-hang-out").addEventListener("click", () => hangUp("out"));
+      // Mic + texto (fallback) para a chamada simulada
+      $("btn-mic-in").addEventListener("click", () => listenOnce("in"));
+      $("btn-mic-out").addEventListener("click", () => listenOnce("out"));
+      const bindSend = (key) => {
+        const inp = $("call-text-" + key);
+        const send = () => { const t = inp.value.trim(); if (t) { inp.value = ""; sendUserTurn(key, t); } };
+        $("btn-send-" + key).addEventListener("click", send);
+        inp.addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
+      };
+      bindSend("in");
+      bindSend("out");
       $("btn-wa-qr").addEventListener("click", refreshWhatsAppQR);
       $("btn-wa-send").addEventListener("click", sendWhatsApp);
       $("btn-ingest").addEventListener("click", ingestDocument);

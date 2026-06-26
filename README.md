@@ -44,12 +44,21 @@ O que **nao** corre na cloud: o LiveKit Server (UDP/RTC) e o worker de voz (fast
 - `APP_WEBHOOK_URL=https://<dominio-control-plane>/api/whatsapp/webhook`
 - QR disponivel em `GET /qr` (mostrado no dashboard) — scan uma vez com WhatsApp > Linked devices
 
+## Funcionalidades da demo (nuvem + local)
+
+- **Pesquisar prospect na web**: no passo 1, escreve o nome do negocio (+ localizacao) e prime «Pesquisar e preencher». O backend usa o plugin `web` do OpenRouter (pesquisa Google via Exa, chave ja existente, ~$0.005/pesquisa) e preenche automaticamente nome, horarios, servicos, precos, notas e sugere o nicho. Depois «Carregar demo» adapta o agente a esse negocio.
+- **Chamada de voz simulada**: «Ligar para o agente» (inbound) ou «Agente liga para mim» (outbound) inicia uma chamada no browser — o agente fala (Web Speech API, voz pt-PT) e ouve o microfone (SpeechRecognition pt-PT). Respostas geradas pelo LLM com o system prompt do cenario. Sem LiveKit/WebRTC — funciona na nuvem. Fallback: escrever a resposta. (Para voz em tempo real com STT/TTS locais, usar a demo local com LiveKit.)
+- **Ingestao de documentos**: upload de foto/PDF -> OpenRouter vision -> email Resend (real).
+- **Calculadora de ROI**: recalc ao vivo.
+- **WhatsApp ao vivo**: gateway Baileys + scan QR (sessao persistente em volume /data).
+
 ## Estrutura
 
 - `app/prompts_pt_pt.py` — constantes de prompt PT-PT partilhadas (voz + cenarios)
 - `app/config.py` — settings (env vars)
 - `app/scenarios/` — construtor de cenarios por nicho (7 nichos)
-- `app/voice/` — agente LiveKit (inbound + outbound)
+- `app/research/` — pesquisa de prospect na web (OpenRouter plugin web) -> contexto 'mastigado'
+- `app/voice/` — agente LiveKit (inbound + outbound) + chat simulado (/api/voice/chat)
 - `app/whatsapp/` — gateway Baileys + ingestao de documentos
 - `app/dashboard/` — UI single-page servida pelo FastAPI
 - `docker-compose.yml` — LiveKit Server local

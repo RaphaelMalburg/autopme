@@ -37,6 +37,17 @@ from app.whatsapp.router import router as whatsapp_router  # noqa: E402
 
 app.include_router(whatsapp_router)
 
+from app.research import research_router  # noqa: E402
+
+app.include_router(research_router)  # POST /api/research/prospect (pesquisa web)
+
+# Chat de voz simulado (LLM PT-PT, sem livekit) — sempre disponivel, mesmo na
+# imagem slim de deploy. O /api/voice/call/start (precisa de livekit) fica abaixo
+# no try/except.
+from app.voice.chat_router import chat_router  # noqa: E402
+
+app.include_router(chat_router)  # POST /api/voice/chat
+
 from app.dashboard import dashboard_router  # noqa: E402
 
 app.include_router(dashboard_router)  # sem prefix: GET / serve o UI

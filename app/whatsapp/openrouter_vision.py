@@ -99,8 +99,13 @@ class OpenRouterVisionClient:
         json_mode: bool = False,
         temperature: float = 0.2,
         max_tokens: int = 2000,
+        plugins: Optional[list[dict]] = None,
     ) -> str:
-        """POST to OpenRouter chat/completions and return the assistant message content."""
+        """POST to OpenRouter chat/completions and return the assistant message content.
+
+        ``plugins`` ativa extensoes do OpenRouter (ex.: web search via
+        ``[{"id": "web", "max_results": 5}]``) usando a mesma chave — sem novo registo.
+        """
         model = model or self.default_model
         payload: dict = {
             "model": model,
@@ -110,6 +115,8 @@ class OpenRouterVisionClient:
         }
         if json_mode:
             payload["response_format"] = {"type": "json_object"}
+        if plugins:
+            payload["plugins"] = plugins
 
         last_error: Optional[Exception] = None
         for attempt in range(3):
