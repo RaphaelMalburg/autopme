@@ -984,7 +984,7 @@
       const trId = "transcript-" + key;
       const badge = $("call-state-" + key);
 
-      // Provider Vapi: voz neural Azure real via web call no browser.
+      // Provider Vapi: voz neural real no browser.
       if (state.voiceProvider === "vapi" && state.voiceAvailable && vapiSdkAvailable() && state.voicePublicKey) {
         callState[key] = { active: true, history: [], rec: null, vapi: null, callRef: null };
         $(trId).innerHTML = '<span class="note">A iniciar chamada Vapi…</span>';
@@ -1000,10 +1000,13 @@
             free_context: state.config.free_context || "",
           });
           callState[key].callRef = r.call_ref || r.call_id || null;
-          // Junta-se à web call via Vapi Web SDK com a public key + assistantId.
+          // Inicia o SDK com assistant transiente completo para garantir a voz certa.
           const v = new Vapi(state.voicePublicKey);
           callState[key].vapi = v;
-          v.on("call-start", () => { badge.textContent = "Em chamada"; badge.className = "badge ok"; $(trId).innerHTML = ""; });
+          v.on("call-start", (call) => {
+            callState[key].callRef = callState[key].callRef || call?.id || call?.callId || null;
+            badge.textContent = "Em chamada"; badge.className = "badge ok"; $(trId).innerHTML = "";
+          });
           v.on("call-end", () => { stopCall(key); });
           v.on("message", (msg) => {
             // Transcrição live (Vapi envia transcript updates em message.type transcript).
@@ -1013,7 +1016,9 @@
             }
           });
           v.on("error", (e) => { setErr($("room-info-" + key), "Vapi: " + (e && e.message ? e.message : e)); });
-          v.start(r.assistant_id || undefined);
+          const assistantConfig = r.assistant || r.assistant_id || undefined;
+          if (!assistantConfig) throw new Error("Resposta Vapi sem assistant configurado.");
+          v.start(assistantConfig);
         } catch (e) {
           badge.textContent = "Erro"; badge.className = "badge err";
           setErr($("room-info-" + key), "Falha ao iniciar Vapi: " + e.message + " (a tentar modo browser…)");

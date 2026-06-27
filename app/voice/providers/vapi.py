@@ -1,4 +1,4 @@
-"""Provider Vapi — voz neural Azure real via web calls.
+"""Provider Vapi — voz neural real via Vapi Web SDK.
 
 Usa as chaves Vapi JA EXISTENTES (agente-consultoria/.env). Para a demo
 presencial usa *web call* (transport: web): chamada no browser via Vapi Web SDK,
@@ -8,9 +8,9 @@ Modular: para remover o Vapi depois, mudar VOICE_PROVIDER=browser — o router
 delega no provider browser (LLM + Web Speech API). Sem chaves Vapi configuradas,
 o factory auto-fallback para browser.
 
-API: POST https://api.vapi.ai/call/web com assistant transiente + assistantOverrides
-a injetar o system_prompt dinamico (por nicho/idioma), a voz Azure mapeada por
-idioma e o transcriber Deepgram.
+API: o backend devolve um assistant transiente completo para o dashboard iniciar
+via Vapi Web SDK. Isto garante que a voz efetiva usada na demo e a configurada
+dinamicamente aqui, sem depender de um assistantId salvo com voz desatualizada.
 """
 from __future__ import annotations
 
@@ -57,8 +57,28 @@ DEEPGRAM_LANG_BY_LANG: dict[str, str] = {
 SUPPORTED_LANGUAGES = sorted(set(AZURE_VOICE_BY_LANG.keys()))
 
 
-def _voice_for(language: str) -> str:
-    return AZURE_VOICE_BY_LANG.get(language) or settings.vapi_voice_id or "pt-PT-RaquelNeural"
+def _voice_config_for(language: str) -> dict[str, str]:
+    normalized = (language or "").strip()
+    explicit_provider = (settings.vapi_voice_provider or "").strip().lower()
+    explicit_voice_id = (settings.vapi_voice_id or "").strip()
+
+    # O setup anterior que soava melhor usava a voz nativa do Vapi "Elliot".
+    # Mantemos esse perfil como default para demos em portugues.
+    if normalized in {"pt-PT", "pt-BR"}:
+        if explicit_provider == "vapi" and explicit_voice_id:
+            return {"provider": explicit_provider, "voiceId": explicit_voice_id}
+        return {"provider": "vapi", "voiceId": "Elliot"}
+    else:
+        preferred = {
+            "provider": "azure",
+            "voiceId": AZURE_VOICE_BY_LANG.get(normalized) or "en-US-JennyNeural",
+        }
+
+    # Fora do portugues, se houver override explicito no .env, respeitamos.
+    if explicit_provider and explicit_voice_id:
+        return {"provider": explicit_provider, "voiceId": explicit_voice_id}
+
+    return preferred
 
 
 def _deepgram_lang_for(language: str) -> str:
@@ -102,7 +122,7 @@ class VapiVoiceProvider(VoiceProvider):
             "languages": SUPPORTED_LANGUAGES,
             "web_call": True,
             "note": (
-                "Voz neural Azure real via Vapi web call (browser). "
+                "Voz neural real via Vapi Web SDK (browser). "
                 + ("Pronto." if self._configured() else "Faltam chaves — auto-fallback para browser.")
             ),
         }
@@ -124,41 +144,34 @@ class VapiVoiceProvider(VoiceProvider):
             raise VoiceProviderError("VAPI_PUBLIC_KEY nao configurada (necessaria para web call no browser)")
 
         direction = (direction or "inbound").lower()
-        voice_id = _voice_for(language)
+        voice = _voice_config_for(language)
         deepgram_lang = _deepgram_lang_for(language)
 
-        # Assistant transiente com o system_prompt dinamico injetado via overrides.
-        # Reusa o assistant salvo (inbound/outbound) se existir, senao transient total.
-        payload: dict[str, Any] = {
-            "transport": {"type": "web"},
-            "assistantOverrides": {
-                "firstMessage": first_message,
-                "model": {
-                    "provider": "google",
-                    "model": "gemini-2.5-flash",
-                    "messages": [{"role": "system", "content": system_prompt}],
-                    "temperature": 0.55,
-                    "knowledge": None,
-                },
-                "voice": {
-                    "provider": self.voice_provider,
-                    "voiceId": voice_id,
-                },
-                "transcriber": {
-                    "provider": "deepgram",
-                    "model": "nova-3",
-                    "language": deepgram_lang,
-                    "endpointing": 250,
-                },
-                "silenceTimeoutSeconds": 30,
-                "responseDelaySeconds": 0.4,
-                "backgroundDenoisingEnabled": True,
-                "firstMessageInterruptionsEnabled": True,
-                "endCallPhrases": [
-                    "adeus", "ate logo", "ate breve", "xau",
-                    "goodbye", "bye", "adios", "ciao", "auf wiedersehen", "au revoir",
-                ],
+        assistant: dict[str, Any] = {
+            "name": f"AutoPME Demo {direction.title()}",
+            "firstMessage": first_message,
+            "model": {
+                "provider": "google",
+                "model": "gemini-2.5-flash",
+                "messages": [{"role": "system", "content": system_prompt}],
+                "temperature": 0.55,
+                "knowledge": None,
             },
+            "voice": voice,
+            "transcriber": {
+                "provider": "deepgram",
+                "model": "nova-3",
+                "language": deepgram_lang,
+                "endpointing": 250,
+            },
+            "silenceTimeoutSeconds": 30,
+            "responseDelaySeconds": 0.4,
+            "backgroundDenoisingEnabled": True,
+            "firstMessageInterruptionsEnabled": True,
+            "endCallPhrases": [
+                "adeus", "ate logo", "ate breve", "xau",
+                "goodbye", "bye", "adios", "ciao", "auf wiedersehen", "au revoir",
+            ],
             "metadata": {
                 "niche": niche,
                 "business_name": business_name,
@@ -166,38 +179,26 @@ class VapiVoiceProvider(VoiceProvider):
                 "language": language,
             },
         }
-        # Preferir assistantId salvo (inbound/outbound) para herdar config base.
-        if direction == "outbound" and self.assistant_id_outbound:
-            payload["assistantId"] = self.assistant_id_outbound
-        elif direction == "inbound" and self.assistant_id_inbound:
-            payload["assistantId"] = self.assistant_id_inbound
 
-        try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                resp = await client.post(
-                    f"{VAPI_API_URL}/call/web",
-                    headers=self._headers(),
-                    json=payload,
-                )
-                if resp.status_code not in (200, 201):
-                    raise VoiceProviderError(f"Vapi /call/web HTTP {resp.status_code}: {resp.text[:300]}")
-                data = resp.json()
-        except httpx.HTTPError as e:
-            raise VoiceProviderError(f"Vapi rede: {e}") from e
-
-        call_id = data.get("id") or data.get("callId")
-        logger.info("Vapi web call criada: id=%s niche=%s lang=%s", call_id, niche, language)
+        logger.info(
+            "Vapi assistant transiente preparado: niche=%s lang=%s direction=%s voice=%s/%s",
+            niche,
+            language,
+            direction,
+            voice.get("provider"),
+            voice.get("voiceId"),
+        )
         return {
             "provider": "vapi",
-            "call_ref": call_id,
-            "call_id": call_id,
+            "call_ref": None,
+            "call_id": None,
             "public_key": self.public_key,
-            "assistant_id": payload.get("assistantId"),
+            "assistant": assistant,
             "direction": direction,
             "language": language,
-            "voice": voice_id,
+            "voice": voice.get("voiceId"),
+            "voice_provider": voice.get("provider"),
             "web_call": True,
-            "raw": data,
         }
 
     async def end_call(self, call_ref: str) -> dict[str, Any]:
