@@ -63,6 +63,17 @@ class Settings(BaseSettings):
     vapi_voice_provider: str = "azure"  # provedor de voz dentro do Vapi (azure)
     vapi_voice_id: str = "pt-PT-RaquelNeural"  # default; por idioma via provider
 
+    # Notion CRM — empurra o prospect da demo para a "Pipeline de Clientes".
+    # NOTION_TOKEN: integracao interna do Notion partilhada com a base.
+    # NOTION_PIPELINE_DATABASE_ID: id da database Pipeline de Clientes.
+    # Se vazios, o botao "Enviar para Pipeline" fica oculto no dashboard.
+    notion_token: Optional[str] = None
+    notion_pipeline_database_id: Optional[str] = None
+
+    # Persistencia leve (sqlite3 stdlib). Em prod, montar volume Railway e
+    # apontar STORAGE_DIR para o mount (ex: /app/data).
+    storage_dir: str = "./data"
+
     # Demo
     default_niche: str = "dental"
     admin_password: Optional[str] = None

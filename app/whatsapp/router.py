@@ -12,6 +12,11 @@ import mimetypes
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel
 
+from app.whatsapp.agent import (
+    get_active_scenario,
+    handle_text_message,
+    set_active_scenario,
+)
 from app.whatsapp.client import WhatsAppGatewayError, whatsapp_client
 from app.whatsapp.emailer import build_extraction_email_html, resend_emailer
 from app.whatsapp.ingestion import extract_document
@@ -24,6 +29,14 @@ router = APIRouter(prefix="/api/whatsapp", tags=["whatsapp"])
 class SendRequest(BaseModel):
     to: str
     message: str
+
+
+class ActiveScenarioRequest(BaseModel):
+    niche: str
+    business_name: str = "Negocio"
+    language: str = "pt-PT"
+    extra: dict | None = None
+    free_context: str = ""
 
 
 def _build_prospect_context(business_name: str, niche: str) -> str:
@@ -44,6 +57,25 @@ def _filename_from_mimetype(mimetype: str) -> str:
 async def whatsapp_qr():
     """Return the current WhatsApp QR code and connection status from the gateway."""
     return await whatsapp_client.get_qr()
+
+
+@router.post("/active")
+async def whatsapp_set_active(body: ActiveScenarioRequest):
+    """Define o negocio que o agente WhatsApp representa (chamado ao carregar a demo)."""
+    scenario = set_active_scenario(
+        niche=body.niche,
+        business_name=body.business_name,
+        language=body.language,
+        extra=body.extra,
+        free_context=body.free_context,
+    )
+    return {"ok": True, "active": scenario}
+
+
+@router.get("/active")
+async def whatsapp_get_active():
+    """Devolve o cenario WhatsApp ativo (para o dashboard mostrar quem responde)."""
+    return {"active": get_active_scenario()}
 
 
 @router.post("/send")
@@ -79,17 +111,17 @@ async def whatsapp_webhook(request: Request):
     logger.info("WhatsApp webhook: from=%s hasMedia=%s mimetype=%s", sender, has_media, mimetype)
 
     if not has_media or not media_b64:
+        # Mensagem de texto: o agente responde como assistente do negocio ativo (LLM).
         try:
-            await whatsapp_client.send_text(
-                to=sender,
-                message=(
-                    "Obrigado pela sua mensagem. Para extrairmos os dados do seu negocio, "
-                    "envie-nos uma foto ou PDF do documento (ex.: menu, folheto, lista de precos)."
-                ),
-            )
+            reply = await handle_text_message(sender=sender, text=message or "")
+        except Exception as e:  # nunca deixar o webhook rebentar
+            logger.error("WhatsApp agent error for %s: %s", sender, e)
+            reply = "Obrigado pela sua mensagem. Em breve a equipa entra em contacto."
+        try:
+            await whatsapp_client.send_text(to=sender, message=reply)
         except WhatsAppGatewayError as e:
-            logger.warning("Could not reply (no media) to %s: %s", sender, e)
-        return {"status": "ok", "action": "no_media"}
+            logger.warning("Could not reply (text) to %s: %s", sender, e)
+        return {"status": "ok", "action": "agent_reply", "reply": reply}
 
     try:
         content = base64.b64decode(media_b64)

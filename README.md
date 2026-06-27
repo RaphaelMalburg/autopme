@@ -48,10 +48,14 @@ O que **nao** corre na cloud: o LiveKit Server (UDP/RTC) e o worker de voz (fast
 
 - **Pesquisar prospect na web**: no passo 1, escreve o nome do negocio (+ localizacao) e prime «Pesquisar e preencher». O backend usa o plugin `web` do OpenRouter (pesquisa Google via Exa, chave ja existente, ~$0.005/pesquisa) e preenche automaticamente nome, horarios, servicos, precos, notas e sugere o nicho. Depois «Carregar demo» adapta o agente a esse negocio.
 - **Diagnostico comercial automatico**: depois de carregar o prospect, a demo gera resumo executivo, dores detetadas, quick wins, plano de 30 dias, follow-up por email/WhatsApp e export em Markdown para apoiar o fecho comercial.
+- **Proposta leave-behind (PDF)**: o botao «Proposta (PDF)» abre um documento de uma pagina com marca AutoPME (resumo, dores, quick wins, plano 30 dias, ROI, proximos passos) pronto a «Imprimir / Guardar PDF» e deixar/enviar ao prospect. Sem dependencias (print-to-PDF do browser).
+- **Roteiro guiado**: barra de passos no topo (1 Carregar negocio -> 2 Diagnostico -> 3 Cenario & voz -> 4 WhatsApp -> 5 Proposta/funil) que acende conforme o consultor avanca na visita.
 - **Chamada de voz simulada**: «Ligar para o agente» (inbound) ou «Agente liga para mim» (outbound) inicia uma chamada no browser — o agente fala (Web Speech API, voz pt-PT) e ouve o microfone (SpeechRecognition pt-PT). Respostas geradas pelo LLM com o system prompt do cenario. Sem LiveKit/WebRTC — funciona na nuvem. Fallback: escrever a resposta. (Para voz em tempo real com STT/TTS locais, usar a demo local com LiveKit.)
 - **Ingestao de documentos**: upload de foto/PDF -> OpenRouter vision -> email Resend (real).
+- **Demo -> Pipeline Notion (CRM)**: depois do diagnostico, o botao «Enviar para Pipeline (Notion)» cria o cartao do prospect na base *Pipeline de Clientes* do Notion (nome, nicho, contacto, estado, notas com resumo+quick wins). Transforma cada demo numa entrada de funil automatica. Configurar `NOTION_TOKEN` + `NOTION_PIPELINE_DATABASE_ID` (ver `.env.example`); sem isso, o botao fica oculto. Endpoints: `GET /api/crm/status`, `POST /api/crm/pipeline`.
+- **Historico de demos (persistencia)**: cada diagnostico gerado fica guardado localmente (sqlite3, sem deps novas) — quantas demos foram feitas, potencial agregado e quais entraram no funil do Notion. Configurar `STORAGE_DIR` (volume Railway em prod). Endpoints: `GET /api/sessions`, `GET /api/sessions/stats`, `POST /api/sessions`.
 - **Calculadora de ROI**: recalc ao vivo.
-- **WhatsApp ao vivo**: gateway Baileys + scan QR (sessao persistente em volume /data).
+- **WhatsApp ao vivo (agente conversacional)**: gateway Baileys + scan QR. Ao carregar uma demo (passo 1), o numero passa a responder automaticamente como esse negocio — mensagens de texto sao respondidas pelo LLM com o contexto do cenario (horarios, servicos, precos), com memoria de conversa por remetente (persistida). Comandos PT-PT: «ajuda», «reiniciar». Documentos (foto/PDF) continuam a seguir para extracao + email. Endpoints: `POST/GET /api/whatsapp/active`, webhook em `/api/whatsapp/webhook`.
 
 ## Estrutura
 
@@ -60,8 +64,10 @@ O que **nao** corre na cloud: o LiveKit Server (UDP/RTC) e o worker de voz (fast
 - `app/scenarios/` — construtor de cenarios por nicho (7 nichos)
 - `app/research/` — pesquisa de prospect na web (OpenRouter plugin web) -> contexto 'mastigado'
 - `app/advisor/` — diagnostico comercial, plano de 30 dias e follow-up de venda
+- `app/crm/` — ponte para a Pipeline de Clientes do Notion (push do prospect apos a demo)
+- `app/storage/` — persistencia leve (sqlite3 stdlib): historico e metricas de demos
 - `app/voice/` — agente LiveKit (inbound + outbound) + chat simulado (/api/voice/chat)
-- `app/whatsapp/` — gateway Baileys + ingestao de documentos
+- `app/whatsapp/` — gateway Baileys + ingestao de documentos + agente conversacional (`agent.py`: comandos + resposta LLM com cenario ativo e memoria por remetente)
 - `app/dashboard/` — UI single-page servida pelo FastAPI
 - `docker-compose.yml` — LiveKit Server local
 

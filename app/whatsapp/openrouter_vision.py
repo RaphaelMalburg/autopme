@@ -12,7 +12,7 @@ import asyncio
 import base64
 import json
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 import httpx
 
@@ -45,18 +45,45 @@ def _parse_extraction(raw: str) -> dict:
             "confidence_scores": {},
             "low_confidence_fields": {},
         }
-    confidence = parsed.get("confianca", {})
-    if not isinstance(confidence, dict):
-        confidence = {}
+    extracted_data, confidence = _normalize_extracted_payload(parsed)
     low_confidence = {
-        k: v for k, v in confidence.items()
-        if isinstance(v, (int, float)) and v < 0.8
+        k: v for k, v in confidence.items() if isinstance(v, (int, float)) and v < 0.8
     }
     return {
-        "extracted_data": parsed,
+        "extracted_data": extracted_data,
         "confidence_scores": confidence,
         "low_confidence_fields": low_confidence,
     }
+
+
+def _normalize_extracted_payload(parsed: Any) -> tuple[dict[str, Any], dict[str, float]]:
+    """Accept both legacy and nested LLM shapes and return flat extracted data."""
+    if not isinstance(parsed, dict):
+        return {}, {}
+
+    explicit_confidence = parsed.get("confianca", {})
+    if not isinstance(explicit_confidence, dict):
+        explicit_confidence = {}
+
+    extracted: dict[str, Any] = {}
+    confidence: dict[str, float] = {}
+
+    for key, value in parsed.items():
+        if key == "confianca":
+            continue
+        if isinstance(value, dict) and "value" in value:
+            extracted[key] = value.get("value")
+            score = value.get("confianca")
+            if isinstance(score, (int, float)):
+                confidence[key] = float(score)
+        else:
+            extracted[key] = value
+
+    for key, value in explicit_confidence.items():
+        if isinstance(value, (int, float)):
+            confidence[key] = float(value)
+
+    return extracted, confidence
 
 
 _EXTRACTION_PROMPT = """Analisa este documento comercial e extrai os dados estruturados em JSON.

@@ -12,6 +12,7 @@ Azure) e ativo se VOICE_PROVIDER=vapi + chaves configuradas; senao browser
 (LLM + Web Speech API). Sem deps pesadas (livekit) no control-plane.
 """
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -21,7 +22,16 @@ from app.config import settings
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="AutoPME Demo Studio", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    from app.storage import db as storage_db
+
+    storage_db.init_db()
+    yield
+
+
+app = FastAPI(title="AutoPME Demo Studio", version="0.1.0", lifespan=lifespan)
 
 
 def _auth_enabled() -> bool:
@@ -69,6 +79,14 @@ app.include_router(auth_router)  # /api/auth/login, /api/auth/me, /api/auth/logo
 from app.advisor import advisor_router  # noqa: E402
 
 app.include_router(advisor_router)  # POST /api/advisor/brief
+
+from app.crm import crm_router  # noqa: E402
+
+app.include_router(crm_router)  # POST /api/crm/pipeline (empurra prospect para Notion)
+
+from app.storage import sessions_router  # noqa: E402
+
+app.include_router(sessions_router)  # /api/sessions (historico + metricas de demos)
 
 # Chat de voz (LLM multi-idioma) — usado pelo provider browser e como fallback.
 from app.voice.chat_router import chat_router  # noqa: E402

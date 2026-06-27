@@ -16,6 +16,8 @@ from __future__ import annotations
 import io
 import logging
 import mimetypes
+import zipfile
+from xml.etree import ElementTree as ET
 from typing import Optional
 
 from app.whatsapp.openrouter_vision import (
@@ -27,6 +29,30 @@ from app.whatsapp.openrouter_vision import (
 logger = logging.getLogger(__name__)
 
 _IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif", ".gif", ".bmp", ".tiff", ".tif")
+_TEXT_EXTS = (".txt", ".md", ".csv", ".json", ".xml", ".html", ".htm")
+
+
+def is_text_like(mimetype: str, filename: str) -> bool:
+    mt = (mimetype or "").lower()
+    name = (filename or "").lower()
+    if mt.startswith("text/"):
+        return True
+    if mt in {
+        "application/json",
+        "application/xml",
+        "text/csv",
+    }:
+        return True
+    return any(name.endswith(ext) for ext in _TEXT_EXTS)
+
+
+def is_docx(mimetype: str, filename: str) -> bool:
+    mt = (mimetype or "").lower()
+    name = (filename or "").lower()
+    return (
+        mt == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        or name.endswith(".docx")
+    )
 
 
 def is_pdf(mimetype: str, filename: str) -> bool:
@@ -75,6 +101,43 @@ def _extract_pdf_text(content: bytes) -> str:
         return ""
 
 
+def _extract_plain_text(content: bytes) -> str:
+    for encoding in ("utf-8", "utf-8-sig", "cp1252", "latin-1"):
+        try:
+            return content.decode(encoding).strip()
+        except UnicodeDecodeError:
+            continue
+    return ""
+
+
+def _extract_docx_text(content: bytes) -> str:
+    try:
+        with zipfile.ZipFile(io.BytesIO(content)) as zf:
+            xml = zf.read("word/document.xml")
+    except Exception as e:
+        logger.warning("DOCX text extraction failed: %s", e)
+        return ""
+    try:
+        root = ET.fromstring(xml)
+    except ET.ParseError as e:
+        logger.warning("DOCX XML parse failed: %s", e)
+        return ""
+
+    paragraphs: list[str] = []
+    current: list[str] = []
+    for node in root.iter():
+        tag = node.tag.rsplit("}", 1)[-1]
+        if tag == "t" and node.text:
+            current.append(node.text)
+        elif tag == "p":
+            if current:
+                paragraphs.append("".join(current).strip())
+                current = []
+    if current:
+        paragraphs.append("".join(current).strip())
+    return "\n".join(p for p in paragraphs if p).strip()
+
+
 async def extract_document(
     content: bytes,
     filename: str,
@@ -111,6 +174,34 @@ async def extract_document(
                 result = await openrouter_vision.extract_from_text(
                     text=pdf_text, prospect_context=prospect_context, language=language
                 )
+        elif is_docx(mimetype, filename):
+            docx_text = _extract_docx_text(content)
+            if not docx_text:
+                return {
+                    "status": "extraction_failed",
+                    "extracted": None,
+                    "confidence_scores": {},
+                    "low_confidence_fields": {},
+                    "raw_text": None,
+                    "error": "Nao foi possivel ler o ficheiro DOCX.",
+                }
+            result = await openrouter_vision.extract_from_text(
+                text=docx_text, prospect_context=prospect_context, language=language
+            )
+        elif is_text_like(mimetype, filename):
+            plain_text = _extract_plain_text(content)
+            if not plain_text:
+                return {
+                    "status": "extraction_failed",
+                    "extracted": None,
+                    "confidence_scores": {},
+                    "low_confidence_fields": {},
+                    "raw_text": None,
+                    "error": "Nao foi possivel ler o conteudo textual do ficheiro.",
+                }
+            result = await openrouter_vision.extract_from_text(
+                text=plain_text, prospect_context=prospect_context, language=language
+            )
         elif is_image(mimetype, filename):
             data_url = build_data_url(content, mimetype)
             result = await openrouter_vision.extract_from_image(

@@ -221,8 +221,8 @@ app.post('/send', async (req, res) => {
   if (!to || !message) {
     return res.status(400).json({ ok: false, error: 'to and message are required' });
   }
-  if (!sock) {
-    return res.status(503).json({ ok: false, error: 'socket not ready' });
+  if (!sock || connectionStatus !== 'connected') {
+    return res.status(503).json({ ok: false, error: `whatsapp_not_connected:${connectionStatus}` });
   }
   try {
     const sent = await sock.sendMessage(normalizeJid(to), { text: message });
@@ -237,8 +237,8 @@ app.post('/send-media', async (req, res) => {
   if (!to || !fileBase64) {
     return res.status(400).json({ ok: false, error: 'to and fileBase64 are required' });
   }
-  if (!sock) {
-    return res.status(503).json({ ok: false, error: 'socket not ready' });
+  if (!sock || connectionStatus !== 'connected') {
+    return res.status(503).json({ ok: false, error: `whatsapp_not_connected:${connectionStatus}` });
   }
   try {
     const buffer = Buffer.from(fileBase64, 'base64');
