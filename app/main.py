@@ -41,6 +41,10 @@ from app.research import research_router  # noqa: E402
 
 app.include_router(research_router)  # POST /api/research/prospect (pesquisa web)
 
+from app.advisor import advisor_router  # noqa: E402
+
+app.include_router(advisor_router)  # POST /api/advisor/brief
+
 # Chat de voz (LLM multi-idioma) — usado pelo provider browser e como fallback.
 from app.voice.chat_router import chat_router  # noqa: E402
 

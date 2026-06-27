@@ -1,0 +1,8 @@
+# Worker de voz em tempo real (opcional).
+# Recomendado usar Python 3.12/3.13 para melhor compatibilidade com as wheels.
+
+-r requirements.txt
+livekit-agents>=0.12.0
+livekit-plugins-deepgram>=0.6.0
+faster-whisper==1.0.3
+# piper-tts==1.2.0

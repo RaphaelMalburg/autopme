@@ -129,8 +129,8 @@ def _identity(role: str, business_name: str, language: str) -> str:
         )
     # pt-PT / pt-BR default
     return (
-        f"Tu és a {role} de {business_name}. Falas sempre em portugues europeu (de Portugal) "
-        "e comportas-te como uma pessoa real que trabalha no negocio."
+        f"Tu és a {role} de {business_name}. Falas sempre em português europeu (de Portugal) "
+        "e comportas-te como uma pessoa real que trabalha no negócio."
     )
 
 

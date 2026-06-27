@@ -4,7 +4,7 @@ Run in an environment with fastapi + httpx installed, e.g.:
 
     pytest app/dashboard/test_smoke.py -q
 
-These tests do NOT start LiveKit, WhatsApp, or any external service. They only
+These tests do NOT start WhatsApp, Vapi, or any external service. They only
 verify that the router serves the single-page UI and that the JS references the
 shared API endpoints from the contract.
 """
@@ -30,6 +30,7 @@ _SCENARIO_LABELS = [
 _CONTRACT_ENDPOINTS = [
     "/api/scenarios/niches",
     "/api/scenarios/build",
+    "/api/advisor/brief",
     "/api/voice/call/start",
     "/api/whatsapp/qr",
     "/api/whatsapp/send",
@@ -62,10 +63,10 @@ def test_js_references_contract_endpoints():
         assert ep in html, f"endpoint do contrato em falta no JS: {ep}"
 
 
-def test_livekit_cdn_referenced():
+def test_vapi_sdk_referenced():
     html = _INDEX.read_text(encoding="utf-8")
-    assert "cdn.jsdelivr.net/npm/livekit-client" in html
-    assert "LivekitClient" in html
+    assert "@vapi-ai/web" in html
+    assert "new Vapi(" in html
 
 
 def test_static_route_serves_index_and_404s_missing():
@@ -77,8 +78,8 @@ def test_static_route_serves_index_and_404s_missing():
     assert missing.status_code == 404
 
 
-def test_transcript_data_channel_handler_present():
-    """Confirma que o JS subscreve o data channel para transcrição ao vivo."""
+def test_browser_and_vapi_transcript_handlers_present():
+    """Confirma que o JS trata transcrição ao vivo nos modos browser e Vapi."""
     html = _INDEX.read_text(encoding="utf-8")
-    assert "RoomEvent.DataReceived" in html
-    assert '"transcript"' in html or "'transcript'" in html
+    assert "appendTranscript(" in html
+    assert 'msg.type === "transcript"' in html or "msg.type === 'transcript'" in html

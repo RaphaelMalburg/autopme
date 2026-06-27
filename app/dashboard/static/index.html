@@ -139,6 +139,19 @@
     .bubble.in .who { color: var(--muted); }
     .preview { background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; padding: 10px; margin: 8px 0; font-size: 13px; }
     .preview .ph { color: var(--muted); font-size: 11px; }
+    .list { margin: 8px 0 0; padding-left: 18px; color: var(--text); font-size: 13px; }
+    .list li { margin: 6px 0; }
+    .kpi-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+    @media (max-width: 820px) { .kpi-grid { grid-template-columns: 1fr; } }
+    .kpi {
+      background: linear-gradient(180deg, #1c2230, #161b24);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .kpi .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+    .kpi .value { font-size: 24px; font-weight: 700; margin-top: 6px; color: var(--accent-2); }
+    .kpi .small { font-size: 12px; color: var(--muted); margin-top: 4px; }
     .roi-result { font-size: 38px; font-weight: 700; color: var(--accent-2); margin: 12px 0; }
     .roi-sub { color: var(--muted); font-size: 13px; }
     .kv { font-size: 13px; }
@@ -215,9 +228,66 @@
       <div class="note" id="provider-status" style="margin-top:10px;"></div>
     </section>
 
+    <section class="card" style="margin-top:16px;">
+      <h2>2 · Diagnostico comercial</h2>
+      <div class="btnrow">
+        <button id="btn-commercial">Gerar diagnostico e proposta</button>
+        <button id="btn-export" class="secondary" disabled>Exportar sessao</button>
+        <button id="btn-copy-email" class="ghost" disabled>Copiar email</button>
+        <button id="btn-copy-wa" class="ghost" disabled>Copiar WhatsApp</button>
+        <span class="note" id="commercial-status"></span>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi">
+          <div class="label">Ganho mensal potencial</div>
+          <div class="value" id="commercial-kpi-gain">—</div>
+          <div class="small" id="commercial-kpi-gain-sub">Preencha o ROI ou carregue a demo.</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Slots recuperados / mes</div>
+          <div class="value" id="commercial-kpi-slots">—</div>
+          <div class="small">Estimativa com base na taxa de no-show.</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Angulo de fecho</div>
+          <div class="small" id="commercial-closing-angle" style="margin-top:8px;">Sem diagnostico ainda.</div>
+        </div>
+      </div>
+      <div class="grid" style="margin-top:16px;">
+        <div class="card">
+          <h3>Resumo executivo</h3>
+          <div class="preview" id="exec-summary">Carregue a demo para gerar um resumo comercial.</div>
+          <h3>Dores detetadas</h3>
+          <ul class="list" id="detected-pains"><li>Aguardando diagnostico.</li></ul>
+          <h3>Quick wins</h3>
+          <ul class="list" id="quick-wins"><li>Aguardando diagnostico.</li></ul>
+        </div>
+        <div class="card">
+          <h3>Plano 30 dias</h3>
+          <div id="plan-30-days">
+            <div class="preview">Aguardando diagnostico.</div>
+          </div>
+          <h3>Stack recomendado</h3>
+          <ul class="list" id="recommended-stack"><li>Aguardando diagnostico.</li></ul>
+        </div>
+      </div>
+      <div class="grid" style="margin-top:16px;">
+        <div class="card">
+          <h3>Email de follow-up</h3>
+          <pre class="transcript" id="followup-email" style="white-space:pre-wrap;"><span class="note">Sem material ainda.</span></pre>
+        </div>
+        <div class="card">
+          <h3>Mensagem WhatsApp</h3>
+          <pre class="transcript" id="followup-wa" style="white-space:pre-wrap;"><span class="note">Sem material ainda.</span></pre>
+          <h3>Proxima reuniao</h3>
+          <ul class="list" id="next-meeting-agenda"><li>Aguardando diagnostico.</li></ul>
+        </div>
+      </div>
+    </section>
+
     <!-- Seletor de cenário -->
     <section class="card" style="margin-top:16px;">
-      <h2>2 · Escolher cenário</h2>
+      <h2>3 · Escolher cenário</h2>
       <div class="scenarios" id="scenarios">
         <button class="scn-btn active" data-scn="voice-inbound">Voz Inbound</button>
         <button class="scn-btn" data-scn="voice-outbound">Voz Outbound</button>
@@ -347,6 +417,9 @@
       niches: [],            // [{id,label,role,booking_term}, ...]
       config: null,          // {niche, business_name, extra}
       built: null,           // resposta de /api/scenarios/build
+      research: null,        // resposta de /api/research/prospect
+      commercial: null,      // resposta de /api/advisor/brief
+      roi: null,             // ultimo calculo ROI
       rooms: {},             // { 'in': LivekitRoom, 'out': LivekitRoom }
     };
 
@@ -393,6 +466,47 @@
       try { return new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(v); }
       catch (e) { return v.toFixed(2) + " €"; }
     }
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+    function nl2br(s) {
+      return escapeHtml(s || "").replace(/\n/g, "<br>");
+    }
+    function renderList(id, items) {
+      const el = $(id);
+      if (!el) return;
+      const vals = Array.isArray(items) ? items.filter(Boolean) : [];
+      el.innerHTML = vals.length ? vals.map((item) => "<li>" + escapeHtml(item) + "</li>").join("") : "<li>Sem dados.</li>";
+    }
+    function renderPlan(items) {
+      const el = $("plan-30-days");
+      if (!el) return;
+      const vals = Array.isArray(items) ? items : [];
+      if (!vals.length) {
+        el.innerHTML = '<div class="preview">Sem plano ainda.</div>';
+        return;
+      }
+      el.innerHTML = vals.map((item) =>
+        '<div class="preview"><div class="ph">' + escapeHtml(item.phase || "") + '</div><b>' +
+        escapeHtml(item.title || "") + '</b><div style="margin-top:6px;">' +
+        escapeHtml(item.outcome || "") + "</div></div>"
+      ).join("");
+    }
+    function currentRoiPayload() {
+      const day = parseFloat($("roi-day").value) || 0;
+      const cur = parseFloat($("roi-cur").value) || 0;
+      const tgt = parseFloat($("roi-tgt").value) || 0;
+      const rev = parseFloat($("roi-rev").value) || 0;
+      const monthlyGain = day * 22 * ((cur - tgt) / 100) * rev;
+      return {
+        consultations_per_day: day,
+        current_no_show_rate: cur,
+        target_no_show_rate: tgt,
+        revenue_per_consultation: rev,
+        monthly_gain: monthlyGain,
+      };
+    }
 
     // ---- 1) Carregar nichos + demo ------------------------------------------
     async function loadNiches() {
@@ -436,11 +550,13 @@
       const st = $("config-status");
       st.textContent = "A carregar demo…"; st.className = "note";
       try {
-        const built = await apiPost("/api/scenarios/build", { niche, business_name, extra, language });
+        const free_context = currentFreeContext();
+        const built = await apiPost("/api/scenarios/build", { niche, business_name, extra, language, free_context });
         state.built = built;
-        state.config = { niche, business_name, extra, language, free_context: currentFreeContext() };
+        state.config = { niche, business_name, extra, language, free_context };
         const term = bookingTermFor(niche);
         setOk(st, "Demo carregada para «" + business_name + "» (" + language + ", termo: " + term + ").");
+        await generateCommercialPlan(true);
       } catch (e) {
         setErr(st, "Erro ao carregar demo: " + e.message);
       }
@@ -452,7 +568,9 @@
       const lang = $("language"); if (lang) lang.value = "pt-PT";
       setOk($("config-status"), "Campos limpos.");
       setErr($("research-status"), "");
-      state.built = null; state.config = null;
+      setErr($("commercial-status"), "");
+      state.built = null; state.config = null; state.research = null; state.commercial = null;
+      renderCommercialPlan(null);
     }
 
     async function loadProviderStatus() {
@@ -491,6 +609,7 @@
         if (extra.services) $("extra_services").value = extra.services;
         if (extra.prices) $("extra_prices").value = extra.prices;
         if (extra.notes) $("extra_notes").value = extra.notes;
+        state.research = r;
         if (r.niche_guess) {
           const sel = $("niche");
           for (const opt of sel.options) { if (opt.value === r.niche_guess) { sel.value = r.niche_guess; break; } }
@@ -500,6 +619,102 @@
       } catch (e) {
         setErr(st, "Erro na pesquisa: " + e.message);
       }
+    }
+
+    function renderCommercialPlan(data) {
+      state.commercial = data || null;
+      const exportBtn = $("btn-export");
+      const emailBtn = $("btn-copy-email");
+      const waBtn = $("btn-copy-wa");
+      if (!data) {
+        $("commercial-kpi-gain").textContent = "—";
+        $("commercial-kpi-gain-sub").textContent = "Preencha o ROI ou carregue a demo.";
+        $("commercial-kpi-slots").textContent = "—";
+        $("commercial-closing-angle").textContent = "Sem diagnostico ainda.";
+        $("exec-summary").textContent = "Carregue a demo para gerar um resumo comercial.";
+        $("followup-email").innerHTML = '<span class="note">Sem material ainda.</span>';
+        $("followup-wa").innerHTML = '<span class="note">Sem material ainda.</span>';
+        renderList("detected-pains", []);
+        renderList("quick-wins", []);
+        renderList("recommended-stack", []);
+        renderList("next-meeting-agenda", []);
+        renderPlan([]);
+        exportBtn.disabled = true;
+        emailBtn.disabled = true;
+        waBtn.disabled = true;
+        return;
+      }
+      const roi = data.roi_summary || {};
+      $("commercial-kpi-gain").textContent = eur(Number(roi.monthly_gain || 0));
+      $("commercial-kpi-gain-sub").textContent = "Estimativa comercial com o cenario atual.";
+      $("commercial-kpi-slots").textContent = String(roi.saved_slots_per_month || 0);
+      $("commercial-closing-angle").textContent = data.closing_angle || "Sem angulo definido.";
+      $("exec-summary").textContent = data.executive_summary || "";
+      renderList("detected-pains", data.detected_pains || []);
+      renderList("quick-wins", data.quick_wins || []);
+      renderList("recommended-stack", data.recommended_stack || []);
+      renderList("next-meeting-agenda", (data.follow_up && data.follow_up.next_meeting_agenda) || []);
+      renderPlan(data.thirty_day_plan || []);
+      const email = data.follow_up || {};
+      $("followup-email").innerHTML =
+        "<b>Assunto:</b> " + escapeHtml(email.email_subject || "") + "<br><br>" + nl2br(email.email_body || "");
+      $("followup-wa").textContent = email.whatsapp_message || "";
+      exportBtn.disabled = false;
+      emailBtn.disabled = false;
+      waBtn.disabled = false;
+    }
+
+    async function generateCommercialPlan(silent) {
+      if (!requireConfig()) return;
+      const st = $("commercial-status");
+      if (!silent) { st.textContent = "A gerar diagnostico comercial…"; st.className = "note"; }
+      try {
+        state.roi = currentRoiPayload();
+        const payload = {
+          business_name: state.config.business_name,
+          niche: state.config.niche,
+          language: state.config.language || currentLanguage(),
+          research_query: $("research-query").value.trim(),
+          extracted: state.research && state.research.extracted ? state.research.extracted : null,
+          extra: state.config.extra,
+          roi: state.roi,
+        };
+        const data = await apiPost("/api/advisor/brief", payload);
+        renderCommercialPlan(data);
+        if (!silent) setOk(st, "Diagnostico e follow-up gerados.");
+      } catch (e) {
+        if (!silent) setErr(st, "Erro ao gerar diagnostico: " + e.message);
+      }
+    }
+
+    async function copyFollowUp(kind) {
+      if (!state.commercial || !state.commercial.follow_up) return;
+      const st = $("commercial-status");
+      const text = kind === "email"
+        ? ((state.commercial.follow_up.email_subject || "") + "\n\n" + (state.commercial.follow_up.email_body || ""))
+        : (state.commercial.follow_up.whatsapp_message || "");
+      try {
+        await navigator.clipboard.writeText(text);
+        setOk(st, (kind === "email" ? "Email" : "WhatsApp") + " copiado para a area de transferencia.");
+      } catch (e) {
+        setErr(st, "Nao foi possivel copiar automaticamente.");
+      }
+    }
+
+    function exportSession() {
+      if (!state.commercial) return;
+      const content = state.commercial.export_markdown || "";
+      const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const safeName = (state.commercial.business_name || "autopme-demo").replace(/[^\w\-]+/g, "_");
+      a.href = url;
+      a.download = safeName + "_autopme_demo.md";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setOk($("commercial-status"), "Sessao exportada em Markdown.");
     }
 
     // ---- 2) Seletor de cenário ----------------------------------------------
@@ -781,11 +996,6 @@
         "Posso ajudar a marcar já agora?";
     }
 
-    function escapeHtml(s) {
-      return String(s).replace(/[&<>"']/g, (c) =>
-        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-    }
-
     // ---- Ingestão de Documentos ---------------------------------------------
     async function ingestDocument() {
       const fileInput = $("ingest-file");
@@ -864,12 +1074,14 @@
 
     // ---- Calculadora de ROI --------------------------------------------------
     function calcROI() {
-      const day = parseFloat($("roi-day").value) || 0;
-      const cur = parseFloat($("roi-cur").value) || 0;
-      const tgt = parseFloat($("roi-tgt").value) || 0;
-      const rev = parseFloat($("roi-rev").value) || 0;
+      const roi = currentRoiPayload();
+      const day = roi.consultations_per_day;
+      const cur = roi.current_no_show_rate;
+      const tgt = roi.target_no_show_rate;
+      const rev = roi.revenue_per_consultation;
       // poupança mensal = consultas/dia * 22 * (atual - alvo)/100 * receita
-      const saved = day * 22 * ((cur - tgt) / 100) * rev;
+      const saved = roi.monthly_gain;
+      state.roi = roi;
       $("roi-result").textContent = eur(saved);
       $("roi-sub").textContent =
         day + " consultas/dia × 22 dias × (" + cur + "% − " + tgt + "%) × " + eur(rev) +
@@ -880,9 +1092,14 @@
     document.addEventListener("DOMContentLoaded", () => {
       loadNiches();
       loadProviderStatus();
+      renderCommercialPlan(null);
       $("btn-load").addEventListener("click", loadDemo);
       $("btn-clear").addEventListener("click", clearFields);
       $("btn-research").addEventListener("click", researchProspect);
+      $("btn-commercial").addEventListener("click", () => generateCommercialPlan(false));
+      $("btn-export").addEventListener("click", exportSession);
+      $("btn-copy-email").addEventListener("click", () => copyFollowUp("email"));
+      $("btn-copy-wa").addEventListener("click", () => copyFollowUp("wa"));
       $("research-query").addEventListener("keydown", (e) => { if (e.key === "Enter") researchProspect(); });
       document.querySelectorAll(".scn-btn").forEach((b) =>
         b.addEventListener("click", () => selectScenario(b.dataset.scn)));
