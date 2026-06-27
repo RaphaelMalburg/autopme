@@ -60,8 +60,13 @@ class Settings(BaseSettings):
     vapi_assistant_id_inbound: Optional[str] = None
     vapi_phone_number_id: Optional[str] = None
     vapi_webhook_secret: Optional[str] = None
-    vapi_voice_provider: str = "azure"  # provedor de voz dentro do Vapi (azure)
+    vapi_voice_provider: str = "azure"  # provedor de voz dentro do Vapi (azure | 11labs)
     vapi_voice_id: str = "pt-PT-RaquelNeural"  # default; por idioma via provider
+    # Modo voz unica multilingue: usa VAPI_VOICE_ID para TODOS os idiomas e deixa
+    # a voz mudar de lingua a meio da chamada (ideal com 11labs multilingue).
+    # Quando false (default), cada idioma usa a sua voz nativa Azure.
+    voice_multilingual: bool = False
+    vapi_11labs_model: str = "eleven_turbo_v2_5"  # modelo 11labs multilingue (rapido)
 
     # Notion CRM — empurra o prospect da demo para a "Pipeline de Clientes".
     # NOTION_TOKEN: integracao interna do Notion partilhada com a base.

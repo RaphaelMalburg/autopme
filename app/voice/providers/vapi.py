@@ -72,13 +72,27 @@ def _voice_config_for(language: str) -> dict[str, str]:
     explicit_provider = (settings.vapi_voice_provider or "azure").strip().lower()
     explicit_voice_id = (settings.vapi_voice_id or "").strip()
 
-    if explicit_voice_id and normalized == default_lang:
-        return {"provider": explicit_provider or "azure", "voiceId": explicit_voice_id}
+    # Modo multilingue: uma unica voz para TODOS os idiomas (muda de lingua a
+    # meio da chamada). Ideal com 11labs multilingue.
+    if settings.voice_multilingual and explicit_voice_id:
+        return _with_11labs_model({"provider": explicit_provider or "11labs", "voiceId": explicit_voice_id})
 
+    # Override do .env para o idioma default (ex.: trocar a voz pt-PT).
+    if explicit_voice_id and normalized == default_lang:
+        return _with_11labs_model({"provider": explicit_provider or "azure", "voiceId": explicit_voice_id})
+
+    # Default por idioma: voz Azure Neural nativa (sotaque correto por lingua).
     return {
         "provider": "azure",
         "voiceId": AZURE_VOICE_BY_LANG.get(normalized) or "en-US-JennyNeural",
     }
+
+
+def _with_11labs_model(voice: dict[str, str]) -> dict[str, str]:
+    """Acrescenta o modelo multilingue quando a voz e ElevenLabs (11labs)."""
+    if voice.get("provider") == "11labs":
+        voice.setdefault("model", settings.vapi_11labs_model or "eleven_turbo_v2_5")
+    return voice
 
 
 def _deepgram_lang_for(language: str) -> str:
@@ -145,7 +159,8 @@ class VapiVoiceProvider(VoiceProvider):
 
         direction = (direction or "inbound").lower()
         voice = _voice_config_for(language)
-        deepgram_lang = _deepgram_lang_for(language)
+        # Em modo multilingue, o transcriber deteta qualquer idioma ("multi").
+        deepgram_lang = "multi" if settings.voice_multilingual else _deepgram_lang_for(language)
 
         assistant: dict[str, Any] = {
             "name": f"AutoPME Demo {direction.title()}",
