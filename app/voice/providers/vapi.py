@@ -58,27 +58,27 @@ SUPPORTED_LANGUAGES = sorted(set(AZURE_VOICE_BY_LANG.keys()))
 
 
 def _voice_config_for(language: str) -> dict[str, str]:
+    """Escolhe o motor de voz (dentro do Vapi) para o idioma.
+
+    Por idioma usamos a voz Azure Neural correta (pt-PT -> portugues europeu
+    real, NAO uma voz nativa inglesa do Vapi). Para o idioma default (pt-PT)
+    respeitamos um override explicito do .env (VAPI_VOICE_PROVIDER+VAPI_VOICE_ID),
+    o que permite trocar a voz pt-PT (ex.: Raquel/Duarte/Fernanda ou 11labs) sem
+    mexer no codigo. Para os restantes idiomas usamos sempre o mapa por idioma,
+    para um voiceId fixo de pt-PT nao "contaminar" en-US, es-ES, etc.
+    """
     normalized = (language or "").strip()
-    explicit_provider = (settings.vapi_voice_provider or "").strip().lower()
+    default_lang = (settings.voice_default_language or "pt-PT").strip()
+    explicit_provider = (settings.vapi_voice_provider or "azure").strip().lower()
     explicit_voice_id = (settings.vapi_voice_id or "").strip()
 
-    # O setup anterior que soava melhor usava a voz nativa do Vapi "Elliot".
-    # Mantemos esse perfil como default para demos em portugues.
-    if normalized in {"pt-PT", "pt-BR"}:
-        if explicit_provider == "vapi" and explicit_voice_id:
-            return {"provider": explicit_provider, "voiceId": explicit_voice_id}
-        return {"provider": "vapi", "voiceId": "Elliot"}
-    else:
-        preferred = {
-            "provider": "azure",
-            "voiceId": AZURE_VOICE_BY_LANG.get(normalized) or "en-US-JennyNeural",
-        }
+    if explicit_voice_id and normalized == default_lang:
+        return {"provider": explicit_provider or "azure", "voiceId": explicit_voice_id}
 
-    # Fora do portugues, se houver override explicito no .env, respeitamos.
-    if explicit_provider and explicit_voice_id:
-        return {"provider": explicit_provider, "voiceId": explicit_voice_id}
-
-    return preferred
+    return {
+        "provider": "azure",
+        "voiceId": AZURE_VOICE_BY_LANG.get(normalized) or "en-US-JennyNeural",
+    }
 
 
 def _deepgram_lang_for(language: str) -> str:
