@@ -28,6 +28,20 @@ _LANG_NAME = {
     "de-DE": "alemao", "it-IT": "italiano",
 }
 
+NICHE_ALIASES = {
+    "restaurant": ["restaurant", "restaurante", "cafe", "cafeteria", "bistro", "tasca", "wine bar", "snack bar"],
+    "bakery": ["bakery", "padaria", "pastelaria", "confeitaria", "pastry", "pao quente"],
+    "beauty": ["beauty", "salao", "salon", "barbearia", "estetica", "spa", "nails"],
+    "hospitality": ["hotel", "hostel", "guesthouse", "alojamento", "alojamento local", "apartamento turistico"],
+    "dental": ["dental", "dentaria", "dentist", "dentista", "clinica dentaria"],
+    "legal": ["legal", "advocacia", "advogado", "law", "solicitor"],
+    "accounting": ["accounting", "contabilidade", "contabilista", "toc", "bookkeeping"],
+    "automotive": ["automotive", "oficina", "garage", "mecanica", "car repair"],
+    "real_estate": ["real estate", "imobiliaria", "imovel", "property"],
+    "fitness": ["fitness", "ginasio", "gym", "pilates", "crossfit"],
+    "pharmacy": ["pharmacy", "farmacia", "drugstore"],
+}
+
 
 def _research_system(language: str) -> str:
     lang_name = _LANG_NAME.get(language, _LANG_NAME["pt-PT"])
@@ -93,6 +107,18 @@ def _safe_parse(raw: str) -> dict[str, Any]:
                 pass
     logger.warning("research_prospect: resposta nao-JSON, devolvendo raw_text")
     return {}
+
+
+def _normalize_niche(raw_niche: Any) -> str | None:
+    if not raw_niche:
+        return None
+    text = str(raw_niche).strip().lower()
+    if text in NICHE_ORDER:
+        return text
+    for niche_id, aliases in NICHE_ALIASES.items():
+        if text == niche_id or any(alias in text for alias in aliases):
+            return niche_id
+    return "custom"
 
 
 async def research_prospect(
@@ -166,9 +192,8 @@ async def research_prospect(
     }
 
     extracted = {k: v for k, v in data.items() if k != "scenario_extra"}
-    niche_guess = extracted.get("niche")
-    if niche_guess and niche_guess not in NICHE_ORDER:
-        niche_guess = None
+    niche_raw = extracted.get("niche")
+    niche_guess = _normalize_niche(niche_raw)
 
     return {
         "query": query,
@@ -176,4 +201,5 @@ async def research_prospect(
         "extracted": extracted,
         "extra": extra_clean,
         "niche_guess": niche_guess,
+        "niche_detected_raw": niche_raw,
     }

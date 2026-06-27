@@ -15,6 +15,11 @@ NICHE_LABELS = {
     "real_estate": "imobiliaria",
     "fitness": "ginasio",
     "pharmacy": "farmacia",
+    "restaurant": "restaurante",
+    "bakery": "padaria ou pastelaria",
+    "beauty": "salao ou centro de estetica",
+    "hospitality": "hotel ou alojamento local",
+    "custom": "negocio de servicos",
 }
 
 
@@ -54,6 +59,31 @@ NICHE_PAINS = {
         "reservas e levantamentos ainda muito manuais",
         "pouco follow-up para servicos de vacina e bem-estar",
     ],
+    "restaurant": [
+        "reservas e pedidos a chegarem por varios canais sem controlo",
+        "muitas perguntas repetidas sobre menu, horario e disponibilidade",
+        "perda de clientes por resposta lenta nas horas de pico",
+    ],
+    "bakery": [
+        "encomendas por telefone e WhatsApp sem processo claro",
+        "muitas perguntas repetidas sobre produtos, horarios e disponibilidade",
+        "perda de vendas em datas especiais por resposta lenta",
+    ],
+    "beauty": [
+        "marcacoes e remarcacoes feitas manualmente",
+        "tempo gasto a responder sempre as mesmas perguntas sobre servicos e precos",
+        "pouca reativacao de clientes que nao voltam ha meses",
+    ],
+    "hospitality": [
+        "pedidos de disponibilidade e reservas tratados manualmente",
+        "muitas perguntas repetidas sobre check-in, localizacao e extras",
+        "lead internacional a perder-se por resposta tardia",
+    ],
+    "custom": [
+        "resposta lenta a contactos novos",
+        "muito trabalho repetitivo no atendimento",
+        "follow-up comercial inconsistente",
+    ],
 }
 
 
@@ -92,6 +122,31 @@ NICHE_WINS = {
         "reservas e confirmacoes de levantamento por WhatsApp",
         "triagem automatica para vacinas e servicos de bem-estar",
         "captura de pedidos com menos interrupcoes ao balcao",
+    ],
+    "restaurant": [
+        "reservas e confirmacoes automatizadas",
+        "resposta imediata a perguntas sobre menu, horario e grupos",
+        "reativacao de clientes e campanhas para horas mortas",
+    ],
+    "bakery": [
+        "registo automatizado de encomendas",
+        "resposta imediata sobre produtos, horarios e levantamento",
+        "campanhas para datas especiais e clientes recorrentes",
+    ],
+    "beauty": [
+        "confirmacao automatica de marcacoes e remarcacoes",
+        "reativacao de clientes inativos",
+        "triagem rapida de pedidos por servico e disponibilidade",
+    ],
+    "hospitality": [
+        "resposta imediata a pedidos de reserva e disponibilidade",
+        "qualificacao de pedido antes da equipa intervir",
+        "follow-up automatico para converter pedidos em reservas",
+    ],
+    "custom": [
+        "triagem inicial de contactos",
+        "follow-up automatizado por WhatsApp",
+        "captura estruturada de pedidos e documentos",
     ],
 }
 

@@ -37,14 +37,14 @@ PT_PT_MARKERS = ["português europeu", "não", "consulta"]
 
 
 def main() -> int:
-    print("=== niches (7 expected, in NICHE_ORDER) ===")
+    print("=== niches (12 expected, in NICHE_ORDER) ===")
     niches = list_niches()
     for n in niches:
         print(
             f"  {n['id']:<12} label={n['label']!r} "
             f"role={n['role']} booking_term={n['booking_term']}"
         )
-    assert len(niches) == 7, f"expected 7 niches, got {len(niches)}"
+    assert len(niches) == 12, f"expected 12 niches, got {len(niches)}"
     assert [n["id"] for n in niches] == NICHE_ORDER, "niche order mismatch"
     assert {n["id"] for n in niches} == set(NICHE_CONFIG_KEYS), "niche id set mismatch"
     print()
@@ -118,7 +118,7 @@ def main() -> int:
 
 # Local alias to avoid importing the whole package just for the key set in the assert.
 NICHE_CONFIG_KEYS = (
-    ("dental", "legal", "accounting", "automotive", "real_estate", "fitness", "pharmacy")
+    ("dental", "legal", "accounting", "automotive", "real_estate", "fitness", "restaurant", "bakery", "beauty", "hospitality", "pharmacy", "custom")
 )
 
 

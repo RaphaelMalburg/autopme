@@ -28,6 +28,7 @@ _SCENARIO_LABELS = [
 ]
 
 _CONTRACT_ENDPOINTS = [
+    "/api/auth/login",
     "/api/scenarios/niches",
     "/api/scenarios/build",
     "/api/advisor/brief",

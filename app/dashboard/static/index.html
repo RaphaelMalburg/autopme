@@ -36,7 +36,9 @@
       display: flex;
       align-items: center;
       gap: 12px;
+      justify-content: space-between;
     }
+    .header-main { display:flex; align-items:center; gap:12px; }
     header .logo {
       width: 28px; height: 28px; border-radius: 6px;
       background: var(--accent); display: grid; place-items: center;
@@ -59,6 +61,7 @@
     }
     .card h2 { margin: 0 0 12px; font-size: 15px; }
     .card h3 { margin: 16px 0 8px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    .titleline { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
     label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
     input, select, textarea {
       width: 100%;
@@ -162,26 +165,76 @@
     .okmsg { color: var(--accent-2); font-size: 13px; margin-top: 8px; }
     .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--muted); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; }
+    .tip {
+      display:inline-grid;
+      place-items:center;
+      width:16px; height:16px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background:var(--panel-2);
+      color:var(--muted);
+      font-size:11px;
+      cursor:help;
+    }
+    .login-overlay {
+      position:fixed;
+      inset:0;
+      background:rgba(10,12,16,.82);
+      backdrop-filter: blur(10px);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+      z-index:1000;
+    }
+    .login-overlay.active { display:flex; }
+    .login-card {
+      width:min(420px, 100%);
+      background:linear-gradient(180deg, #171a21, #101319);
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.35);
+    }
+    .login-card h2 { margin-top:0; }
     @keyframes spin { to { transform: rotate(360deg); } }
     footer { color: var(--muted); font-size: 11px; text-align: center; padding: 20px; }
   </style>
 </head>
 <body>
-  <header>
-    <div class="logo">A</div>
-    <div>
-      <h1>AutoPME Demo Studio</h1>
-      <div class="sub">Demo presencial · automação para PMEs no Porto · multi-idioma · voz Vapi</div>
+  <div class="login-overlay" id="login-overlay">
+    <div class="login-card">
+      <h2>Acesso protegido</h2>
+      <div class="note" style="margin-top:0;">Introduza a senha da demo para desbloquear o dashboard e as APIs.</div>
+      <label for="login-password">Senha</label>
+      <input id="login-password" type="password" placeholder="Ex.: democonsultoria123" />
+      <div class="btnrow">
+        <button id="btn-login">Entrar</button>
+        <span class="note" id="login-status"></span>
+      </div>
     </div>
+  </div>
+  <header>
+    <div class="header-main">
+      <div class="logo">A</div>
+      <div>
+        <h1>AutoPME Demo Studio</h1>
+        <div class="sub">Demo presencial · automação para PMEs no Porto · multi-idioma · voz Vapi</div>
+      </div>
+    </div>
+    <button id="btn-logout" class="ghost" style="display:none;">Sair</button>
   </header>
 
   <main>
     <!-- Configuração da visita -->
     <section class="card" id="config-card">
-      <h2>1 · Configurar visita</h2>
+      <div class="titleline">
+        <h2>1 · Configurar visita</h2>
+        <span class="tip" title="Pesquise um negocio real, confirme o nicho e depois carregue a demo para gerar o guiao, diagnostico e os cenarios.">?</span>
+      </div>
       <div class="row2" style="margin-bottom:12px;">
         <div>
-          <label for="research-query">Pesquisar prospect na web (opcional)</label>
+          <label for="research-query">Pesquisar prospect na web (opcional) <span class="tip" title="Escreva nome do negocio mais cidade ou website. A pesquisa tenta preencher nome, horarios, servicos, precos e sugerir o nicho.">?</span></label>
           <input id="research-query" type="text" placeholder="Ex.: Clínica Dentária Sorriso, Porto" />
         </div>
         <div style="display:flex; align-items:flex-end; gap:8px;">
@@ -191,7 +244,7 @@
       </div>
       <div class="grid">
         <div>
-          <label for="language">Idioma da demo</label>
+          <label for="language">Idioma da demo <span class="tip" title="Define o idioma principal do agente e da experiencia da demo.">?</span></label>
           <select id="language">
             <option value="pt-PT">Português (Portugal)</option>
             <option value="pt-BR">Português (Brasil)</option>
@@ -202,8 +255,9 @@
             <option value="de-DE">Deutsch</option>
             <option value="it-IT">Italiano</option>
           </select>
-          <label for="niche">Nicho (auto-preenchido pela pesquisa)</label>
+          <label for="niche">Nicho (auto-preenchido pela pesquisa) <span class="tip" title="Agora a pesquisa pode encaixar diretamente em nichos como restaurante e, se nao houver correspondencia exata, cai no nicho generico 'Outro negocio'.">?</span></label>
           <select id="niche"><option value="">A carregar nichos…</option></select>
+          <div class="note" id="niche-status"></div>
           <label for="business_name">Nome do negócio</label>
           <input id="business_name" type="text" placeholder="Ex.: Clínica Dentária Exemplo" />
         </div>
@@ -218,7 +272,7 @@
           <input id="extra_notes" type="text" placeholder="Notas extra (opcional)" />
         </div>
       </div>
-      <label for="free_context" style="margin-top:10px;">Contexto adicional (bloco livre — entra no prompt do agente)</label>
+      <label for="free_context" style="margin-top:10px;">Contexto adicional (bloco livre — entra no prompt do agente) <span class="tip" title="Use este campo para colar observacoes do prospect, objeccoes, detalhes comerciais e qualquer contexto que queira que o agente use na demo.">?</span></label>
       <textarea id="free_context" placeholder="Cole aqui notas do prospect, dor que ele descreveu, objetivos, concorrência, qualquer contexto que o agente deva usar…"></textarea>
       <div class="btnrow">
         <button id="btn-load">Carregar demo</button>
@@ -229,7 +283,10 @@
     </section>
 
     <section class="card" style="margin-top:16px;">
-      <h2>2 · Diagnostico comercial</h2>
+      <div class="titleline">
+        <h2>2 · Diagnostico comercial</h2>
+        <span class="tip" title="Esta secao transforma a demo numa proposta: resume as dores, sugere quick wins e gera follow-up comercial pronto a usar.">?</span>
+      </div>
       <div class="btnrow">
         <button id="btn-commercial">Gerar diagnostico e proposta</button>
         <button id="btn-export" class="secondary" disabled>Exportar sessao</button>
@@ -287,7 +344,10 @@
 
     <!-- Seletor de cenário -->
     <section class="card" style="margin-top:16px;">
-      <h2>3 · Escolher cenário</h2>
+      <div class="titleline">
+        <h2>3 · Escolher cenário</h2>
+        <span class="tip" title="Use cada cenario como prova concreta: voz para atendimento, WhatsApp para follow-up, ingestao para documentos, reativacao para receita escondida e ROI para justificar a compra.">?</span>
+      </div>
       <div class="scenarios" id="scenarios">
         <button class="scn-btn active" data-scn="voice-inbound">Voz Inbound</button>
         <button class="scn-btn" data-scn="voice-outbound">Voz Outbound</button>
@@ -420,6 +480,8 @@
       research: null,        // resposta de /api/research/prospect
       commercial: null,      // resposta de /api/advisor/brief
       roi: null,             // ultimo calculo ROI
+      authEnabled: false,
+      authenticated: false,
       rooms: {},             // { 'in': LivekitRoom, 'out': LivekitRoom }
     };
 
@@ -430,9 +492,18 @@
 
     function setErr(el, msg) { if (el) { el.textContent = msg; el.className = msg ? "err" : ""; } }
     function setOk(el, msg) { if (el) { el.textContent = msg; el.className = msg ? "okmsg" : ""; } }
+    function showLoginOverlay(show) {
+      $("login-overlay").classList.toggle("active", !!show);
+      $("btn-logout").style.display = show ? "none" : (state.authEnabled ? "inline-block" : "none");
+    }
 
     async function apiGet(path) {
       const res = await fetch(API + path);
+      if (res.status === 401) {
+        state.authenticated = false;
+        showLoginOverlay(true);
+        throw new Error("Sessão protegida: introduza a senha da demo.");
+      }
       if (!res.ok) throw new Error("GET " + path + " -> " + res.status);
       return res.json();
     }
@@ -442,11 +513,21 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
+      if (res.status === 401) {
+        state.authenticated = false;
+        showLoginOverlay(true);
+        throw new Error("Sessão protegida: introduza a senha da demo.");
+      }
       if (!res.ok) throw new Error("POST " + path + " -> " + res.status);
       return res.json();
     }
     async function apiPostForm(path, form) {
       const res = await fetch(API + path, { method: "POST", body: form });
+      if (res.status === 401) {
+        state.authenticated = false;
+        showLoginOverlay(true);
+        throw new Error("Sessão protegida: introduza a senha da demo.");
+      }
       if (!res.ok) throw new Error("POST " + path + " -> " + res.status);
       return res.json();
     }
@@ -506,6 +587,48 @@
         revenue_per_consultation: rev,
         monthly_gain: monthlyGain,
       };
+    }
+
+    async function ensureAuth() {
+      try {
+        const res = await fetch(API + "/api/auth/me");
+        const data = await res.json();
+        state.authEnabled = !!data.enabled;
+        state.authenticated = !!data.authenticated;
+        showLoginOverlay(state.authEnabled && !state.authenticated);
+      } catch (e) {
+        showLoginOverlay(false);
+      }
+    }
+
+    async function loginDemo() {
+      const password = $("login-password").value;
+      const st = $("login-status");
+      st.textContent = "A validar…"; st.className = "note";
+      try {
+        const res = await fetch(API + "/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password }),
+        });
+        if (!res.ok) throw new Error("Senha inválida.");
+        const data = await res.json();
+        state.authEnabled = !!data.enabled;
+        state.authenticated = true;
+        $("login-password").value = "";
+        showLoginOverlay(false);
+        setOk(st, "");
+        await loadNiches();
+        await loadProviderStatus();
+      } catch (e) {
+        setErr(st, e.message || "Falha no login.");
+      }
+    }
+
+    async function logoutDemo() {
+      try { await fetch(API + "/api/auth/logout", { method: "POST" }); } catch (e) {}
+      state.authenticated = false;
+      showLoginOverlay(true);
     }
 
     // ---- 1) Carregar nichos + demo ------------------------------------------
@@ -568,6 +691,7 @@
       const lang = $("language"); if (lang) lang.value = "pt-PT";
       setOk($("config-status"), "Campos limpos.");
       setErr($("research-status"), "");
+      $("niche-status").textContent = "";
       setErr($("commercial-status"), "");
       state.built = null; state.config = null; state.research = null; state.commercial = null;
       renderCommercialPlan(null);
@@ -610,9 +734,19 @@
         if (extra.prices) $("extra_prices").value = extra.prices;
         if (extra.notes) $("extra_notes").value = extra.notes;
         state.research = r;
+        const nicheStatus = $("niche-status");
         if (r.niche_guess) {
           const sel = $("niche");
           for (const opt of sel.options) { if (opt.value === r.niche_guess) { sel.value = r.niche_guess; break; } }
+          if (r.niche_guess === "custom") {
+            nicheStatus.textContent = "A pesquisa encontrou um tipo de negócio fora da lista padrão; foi aplicado o nicho genérico para a demo.";
+          } else if (r.niche_detected_raw && r.niche_detected_raw !== r.niche_guess) {
+            nicheStatus.textContent = "Nicho sugerido pela pesquisa: " + r.niche_detected_raw + " → mapeado para " + r.niche_guess + ".";
+          } else {
+            nicheStatus.textContent = "Nicho sugerido automaticamente: " + r.niche_guess + ".";
+          }
+        } else {
+          nicheStatus.textContent = "A pesquisa não conseguiu encaixar o nicho; selecione manualmente ou use 'Outro negocio'.";
         }
         const found = ex.nome_negocio ? "«" + ex.nome_negocio + "»" : "o negócio";
         setOk(st, "Contexto preenchido para " + found + ". Verifique os campos e carregue a demo.");
@@ -1090,9 +1224,16 @@
 
     // ---- Bindings ------------------------------------------------------------
     document.addEventListener("DOMContentLoaded", () => {
-      loadNiches();
-      loadProviderStatus();
+      ensureAuth().then(() => {
+        if (!state.authEnabled || state.authenticated) {
+          loadNiches();
+          loadProviderStatus();
+        }
+      });
       renderCommercialPlan(null);
+      $("btn-login").addEventListener("click", loginDemo);
+      $("login-password").addEventListener("keydown", (e) => { if (e.key === "Enter") loginDemo(); });
+      $("btn-logout").addEventListener("click", logoutDemo);
       $("btn-load").addEventListener("click", loadDemo);
       $("btn-clear").addEventListener("click", clearFields);
       $("btn-research").addEventListener("click", researchProspect);

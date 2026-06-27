@@ -65,6 +65,8 @@ class Settings(BaseSettings):
 
     # Demo
     default_niche: str = "dental"
+    admin_password: Optional[str] = None
+    auth_cookie_name: str = "autopme_demo_auth"
 
     model_config = {"env_file": ".env", "case_sensitive": False}
 

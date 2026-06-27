@@ -1,7 +1,7 @@
 """Niche presets for the AutoPME Demo Studio.
 
 Ported and adapted from agente-consultoria/app/routers/webhooks_vapi.py (NICHE_CONFIG).
-Seven niches for PMEs in Porto. Multi-language (default PT-PT).
+Core niches for PMEs in Porto plus generic/custom fallback. Multi-language (default PT-PT).
 
 Each niche config contains:
 - label: human-friendly label for the dashboard.
@@ -298,6 +298,154 @@ NICHE_CONFIG: dict[str, dict[str, Any]] = {
             "Notas: Primeira visita e aula experimental gratuitas. Pagamentos por débito direto, MB WAY e multibanco. Balneários com cacifos (cadeado próprio). Aceitamos utentes a partir dos 16 anos com autorização dos encarregados de educação.",
         ),
     },
+    "restaurant": {
+        "label": "Restaurantes / Cafes",
+        "role": "recepcionista",
+        "booking_term": "reserva",
+        "first_message_inbound": "Olá, {business_name}, em que posso ajudar?",
+        "first_message_outbound": "Olá, falo de {business_name}, estou a ligar para confirmar a sua reserva.",
+        "booking_flow": (
+            "## FLUXO DE RESERVA\n"
+            "Passo 1: \"Claro, posso ajudar com isso. Qual é o seu nome?\"\n"
+            "Passo 2: \"E um número de telefone para contacto?\"\n"
+            "Passo 3: \"Para quantas pessoas é a reserva?\"\n"
+            "Passo 4: \"Que dia e hora prefere?\"\n"
+            "Passo 5: \"Há alguma preferência especial? Esplanada, interior, alergias, cadeira de bebé?\"\n"
+            "Passo 6: Confirma tudo, usa captureAppointment, diz que está registado e pergunta se pode ajudar com mais alguma coisa.\n"
+            "Passo 7: Se a pessoa disser que não, despede-te e usa endCall.\n"
+            "Recolhe um dado de cada vez. Não peças tudo ao mesmo tempo.\n"
+        ),
+        "what_you_do": (
+            "1. Responder perguntas sobre o restaurante (horários, menu, reservas, localização) usando APENAS o conhecimento abaixo.\n"
+            "2. Informar sobre pratos, preços, menus de grupo, opções vegetarianas e disponibilidade.\n"
+            "3. Marcar reservas: recolhe nome, telefone, número de pessoas, data/hora e preferência especial.\n"
+            "4. Se a pessoa quiser falar com a gerência ou tiver um pedido fora do teu alcance, dizes que vais passar a mensagem e alguém responde.\n"
+        ),
+        "capture_tool_desc": "Registar um pedido de reserva. Usa APENAS depois de teres nome, telefone, número de pessoas, data/hora e preferência.",
+        "capture_fields": {
+            "callerName": "Nome do cliente",
+            "callerPhone": "Telefone do cliente",
+            "preferredDateTime": "Data e hora pretendida",
+            "reason": "Número de pessoas e preferências especiais",
+        },
+        "example_knowledge": _knowledge(
+            "Horários: Segunda a domingo das 12h às 15h e das 19h às 23h. Encerrado à terça ao jantar.",
+            "Serviços: Almoço e jantar, reservas, menu executivo, takeaway, eventos de grupo até 30 pessoas, opções vegetarianas e sem glúten.",
+            "Preços: Menu executivo desde 14€. Pratos principais entre 12€ e 24€. Menu de grupo desde 28€ por pessoa.",
+            "Notas: Esplanada sujeita a disponibilidade. Aceitamos MB WAY e multibanco. Recomendamos reserva para sexta e sábado ao jantar.",
+        ),
+    },
+    "bakery": {
+        "label": "Padarias / Pastelarias",
+        "role": "recepcionista",
+        "booking_term": "encomenda",
+        "first_message_inbound": "Olá, {business_name}, em que posso ajudar?",
+        "first_message_outbound": "Olá, falo de {business_name}, estou a ligar para confirmar a sua encomenda.",
+        "booking_flow": (
+            "## FLUXO DE ENCOMENDA\n"
+            "Passo 1: \"Claro, posso ajudar com isso. Qual é o seu nome?\"\n"
+            "Passo 2: \"E um número de telefone para contacto?\"\n"
+            "Passo 3: \"Qual é a encomenda? Pode indicar produtos, quantidades e se é para festa, pequeno-almoço ou outro evento?\"\n"
+            "Passo 4: \"Para que dia e hora pretende levantar ou receber a encomenda?\"\n"
+            "Passo 5: \"Há alguma nota especial? Sem açúcar, mensagem no bolo, entrega?\"\n"
+            "Passo 6: Confirma tudo, usa captureAppointment, diz que está registado e pergunta se pode ajudar com mais alguma coisa.\n"
+            "Passo 7: Se a pessoa disser que não, despede-te e usa endCall.\n"
+            "Recolhe um dado de cada vez. Não peças tudo ao mesmo tempo.\n"
+        ),
+        "what_you_do": (
+            "1. Responder perguntas sobre a padaria/pastelaria (horários, produtos, encomendas, localização) usando APENAS o conhecimento abaixo.\n"
+            "2. Informar sobre bolos, pão, salgados, catering ligeiro e preços.\n"
+            "3. Registar encomendas: recolhe nome, telefone, detalhe do pedido e data/hora de levantamento ou entrega.\n"
+            "4. Se a pessoa tiver um pedido especial fora do teu alcance, dizes que a equipa confirma e responde.\n"
+        ),
+        "capture_tool_desc": "Registar uma encomenda. Usa APENAS depois de teres nome, telefone, pedido e data/hora.",
+        "capture_fields": {
+            "callerName": "Nome do cliente",
+            "callerPhone": "Telefone do cliente",
+            "preferredDateTime": "Data e hora pretendida",
+            "reason": "Encomenda, quantidades e notas especiais",
+        },
+        "example_knowledge": _knowledge(
+            "Horários: Segunda a domingo das 7h às 20h.",
+            "Serviços: Pão fresco diário, pastelaria, bolos de aniversário, salgados, coffee break e pequenas encomendas para eventos.",
+            "Preços: Bolo de aniversário desde 28€. Mini pastelaria desde 0,95€ por unidade. Menus de pequeno-almoço desde 4,50€.",
+            "Notas: Encomendas de bolo idealmente com 24 a 48 horas de antecedência. Entrega local sujeita a disponibilidade.",
+        ),
+    },
+    "beauty": {
+        "label": "Salao / Estetica",
+        "role": "recepcionista",
+        "booking_term": "marcação",
+        "first_message_inbound": "Olá, {business_name}, em que posso ajudar?",
+        "first_message_outbound": "Olá, falo de {business_name}, estou a ligar para confirmar a sua marcação.",
+        "booking_flow": (
+            "## FLUXO DE MARCAÇÃO\n"
+            "Passo 1: \"Claro, posso ajudar com isso. Qual é o seu nome?\"\n"
+            "Passo 2: \"E um número de telefone para contacto?\"\n"
+            "Passo 3: \"Qual é o serviço pretendido? Cabelo, unhas, estética, depilação, maquilhagem?\"\n"
+            "Passo 4: \"Que dia e hora prefere?\"\n"
+            "Passo 5: \"Há alguma preferência por profissional ou nota especial?\"\n"
+            "Passo 6: Confirma tudo, usa captureAppointment, diz que está registado e pergunta se pode ajudar com mais alguma coisa.\n"
+            "Passo 7: Se a pessoa disser que não, despede-te e usa endCall.\n"
+            "Recolhe um dado de cada vez. Não peças tudo ao mesmo tempo.\n"
+        ),
+        "what_you_do": (
+            "1. Responder perguntas sobre o salão/centro (horários, serviços, preços, localização) usando APENAS o conhecimento abaixo.\n"
+            "2. Informar sobre tratamentos, packs, duração e preços.\n"
+            "3. Marcar serviços: recolhe nome, telefone, serviço pretendido, data/hora e preferência por profissional.\n"
+            "4. Se a pessoa quiser um diagnóstico técnico ou algo fora do teu alcance, passas a mensagem à equipa.\n"
+        ),
+        "capture_tool_desc": "Registar uma marcação. Usa APENAS depois de teres nome, telefone, serviço e data/hora.",
+        "capture_fields": {
+            "callerName": "Nome do cliente",
+            "callerPhone": "Telefone do cliente",
+            "preferredDateTime": "Data e hora preferida",
+            "reason": "Serviço pretendido e preferências",
+        },
+        "example_knowledge": _knowledge(
+            "Horários: Segunda a sábado das 9h às 19h. Encerrado ao domingo.",
+            "Serviços: Corte e coloração, brushing, manicure, pedicure, depilação, limpeza de pele, massagens e packs de noiva.",
+            "Preços: Corte desde 18€. Manicure gel desde 22€. Limpeza de pele desde 35€. Coloração desde 45€.",
+            "Notas: Marcação recomendada para sexta e sábado. Packs e promoções mensais disponíveis sob consulta.",
+        ),
+    },
+    "hospitality": {
+        "label": "Hotel / Alojamento Local",
+        "role": "recepcionista",
+        "booking_term": "reserva",
+        "first_message_inbound": "Olá, {business_name}, em que posso ajudar?",
+        "first_message_outbound": "Olá, falo de {business_name}, estou a ligar para confirmar a sua reserva.",
+        "booking_flow": (
+            "## FLUXO DE RESERVA\n"
+            "Passo 1: \"Claro, posso ajudar com isso. Qual é o seu nome?\"\n"
+            "Passo 2: \"E um número de telefone para contacto?\"\n"
+            "Passo 3: \"Para que datas pretende reservar?\"\n"
+            "Passo 4: \"Quantas pessoas são e que tipo de quarto ou alojamento procura?\"\n"
+            "Passo 5: \"Tem alguma necessidade especial? Check-in tardio, berço, estacionamento?\"\n"
+            "Passo 6: Confirma tudo, usa captureAppointment, diz que está registado e pergunta se pode ajudar com mais alguma coisa.\n"
+            "Passo 7: Se a pessoa disser que não, despede-te e usa endCall.\n"
+            "Recolhe um dado de cada vez. Não peças tudo ao mesmo tempo.\n"
+        ),
+        "what_you_do": (
+            "1. Responder perguntas sobre o alojamento (disponibilidade, horários, localização, quartos, pequeno-almoço) usando APENAS o conhecimento abaixo.\n"
+            "2. Informar sobre tipos de quarto, preços, política de check-in/check-out e extras.\n"
+            "3. Registar pedidos de reserva: recolhe nome, telefone, datas, número de pessoas e preferências.\n"
+            "4. Se a pessoa quiser confirmação final de disponibilidade, dizes que a equipa valida e responde em breve.\n"
+        ),
+        "capture_tool_desc": "Registar um pedido de reserva. Usa APENAS depois de teres nome, telefone, datas e número de pessoas.",
+        "capture_fields": {
+            "callerName": "Nome do cliente",
+            "callerPhone": "Telefone do cliente",
+            "preferredDateTime": "Datas pretendidas",
+            "reason": "Tipo de quarto, número de pessoas e preferências",
+        },
+        "example_knowledge": _knowledge(
+            "Horários: Check-in a partir das 15h. Check-out até às 11h. Receção disponível das 8h às 22h.",
+            "Serviços: Quartos standard e superior, pequeno-almoço, transfer, estacionamento sujeito a disponibilidade, check-in tardio e apoio turístico.",
+            "Preços: Quartos desde 85€ por noite em época baixa. Pequeno-almoço incluído em algumas tarifas. Transfer aeroporto desde 25€.",
+            "Notas: Reservas de grupo e estadias longas sob consulta. Check-in tardio precisa de aviso prévio.",
+        ),
+    },
     "pharmacy": {
         "label": "Farmácias",
         "role": "recepcionista",
@@ -339,6 +487,42 @@ NICHE_CONFIG: dict[str, dict[str, Any]] = {
             "Notas: Reservas de medicamentos prontas em 2 horas para levantamento no mesmo dia. Aceitamos receitas digitais (SNS) e em papel. Entregas ao domicílio gratuitas a partir de 25€ num raio de 5 km. Não fornecemos medicamentos sujeitos a receita sem a respetiva receita válida.",
         ),
     },
+    "custom": {
+        "label": "Outro negocio (generico)",
+        "role": "assistente",
+        "booking_term": "pedido",
+        "first_message_inbound": "Olá, {business_name}, em que posso ajudar?",
+        "first_message_outbound": "Olá, falo de {business_name}, estou a ligar para dar seguimento ao seu pedido.",
+        "booking_flow": (
+            "## FLUXO DE ATENDIMENTO\n"
+            "Passo 1: \"Claro, posso ajudar com isso. Qual é o seu nome?\"\n"
+            "Passo 2: \"E um número de telefone para contacto?\"\n"
+            "Passo 3: \"Pode explicar brevemente o que precisa?\"\n"
+            "Passo 4: \"Que dia e hora prefere para sermos nós a dar seguimento?\"\n"
+            "Passo 5: Confirma tudo, usa captureAppointment, diz que está registado e pergunta se pode ajudar com mais alguma coisa.\n"
+            "Passo 6: Se a pessoa disser que não, despede-te e usa endCall.\n"
+            "Recolhe um dado de cada vez. Não peças tudo ao mesmo tempo.\n"
+        ),
+        "what_you_do": (
+            "1. Responder perguntas sobre o negócio usando APENAS o conhecimento abaixo.\n"
+            "2. Recolher pedidos de contacto, marcação, orçamento ou informação.\n"
+            "3. Confirmar os dados básicos do cliente para seguimento posterior.\n"
+            "4. Se faltar informação, dizes que a equipa vai confirmar e responder em breve.\n"
+        ),
+        "capture_tool_desc": "Registar um pedido genérico. Usa APENAS depois de teres nome, telefone, pedido e data/hora desejada.",
+        "capture_fields": {
+            "callerName": "Nome do cliente",
+            "callerPhone": "Telefone do cliente",
+            "preferredDateTime": "Melhor data e hora para seguimento",
+            "reason": "Pedido, dúvida ou serviço pretendido",
+        },
+        "example_knowledge": _knowledge(
+            "Horários: Segunda a sexta das 9h às 18h.",
+            "Serviços: Atendimento comercial, pedidos de contacto, esclarecimento de dúvidas e agendamento.",
+            "Preços: Sob consulta, conforme o serviço solicitado.",
+            "Notas: Se a informação não estiver disponível, a equipa confirma e entra em contacto.",
+        ),
+    },
 }
 
 
@@ -350,7 +534,12 @@ NICHE_ORDER: list[str] = [
     "automotive",
     "real_estate",
     "fitness",
+    "restaurant",
+    "bakery",
+    "beauty",
+    "hospitality",
     "pharmacy",
+    "custom",
 ]
 
 

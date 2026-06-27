@@ -13,7 +13,8 @@ Azure) e ativo se VOICE_PROVIDER=vapi + chaves configuradas; senao browser
 """
 import logging
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 
 from app.config import settings
 
@@ -21,6 +22,26 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="AutoPME Demo Studio", version="0.1.0")
+
+
+def _auth_enabled() -> bool:
+    return bool((settings.admin_password or "").strip())
+
+
+def _is_public_path(path: str) -> bool:
+    if path in ("/", "/api/health"):
+        return True
+    return path.startswith("/static/") or path.startswith("/api/auth/")
+
+
+@app.middleware("http")
+async def demo_auth_middleware(request: Request, call_next):
+    if not _auth_enabled() or _is_public_path(request.url.path):
+        return await call_next(request)
+    cookie = request.cookies.get(settings.auth_cookie_name, "")
+    if cookie != (settings.admin_password or ""):
+        return JSONResponse(status_code=401, content={"detail": "auth_required"})
+    return await call_next(request)
 
 
 @app.get("/api/health")
@@ -40,6 +61,10 @@ app.include_router(whatsapp_router)
 from app.research import research_router  # noqa: E402
 
 app.include_router(research_router)  # POST /api/research/prospect (pesquisa web)
+
+from app.auth import auth_router  # noqa: E402
+
+app.include_router(auth_router)  # /api/auth/login, /api/auth/me, /api/auth/logout
 
 from app.advisor import advisor_router  # noqa: E402
 
