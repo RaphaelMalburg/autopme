@@ -1,0 +1,12 @@
+{
+  "niche": "restaurant",
+  "business_name": "Tasca do Porto (exemplo)",
+  "language": "pt-PT",
+  "extra": {
+    "opening_hours": "Ter-Dom 12h-15h e 19h-23h. Encerra à segunda.",
+    "services": "Almoços, jantares, menu do dia, grupos e eventos, takeaway",
+    "prices": "Menu do dia 12€, pratos principais 12-22€, menu de grupo desde 25€/pessoa",
+    "notes": "Reserva recomendada ao fim de semana. Sala para grupos até 30. Opções vegetarianas."
+  },
+  "free_context": "FAQ: Preciso de reservar? Recomendado, sobretudo fim de semana. Têm menu vegetariano? Sim. Aceitam grupos? Sim, até 30 pessoas. Fazem takeaway? Sim."
+}

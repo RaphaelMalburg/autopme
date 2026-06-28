@@ -1,0 +1,12 @@
+{
+  "niche": "automotive",
+  "business_name": "Oficina Auto Central (exemplo)",
+  "language": "pt-PT",
+  "extra": {
+    "opening_hours": "Seg-Sex 8h30-18h30, Sáb 9h-13h",
+    "services": "Revisões, mudança de óleo, travões, pneus, diagnóstico, inspeção pré-IPO, chapa e pintura",
+    "prices": "Revisão desde 90€, mudança de óleo desde 60€, diagnóstico 35€ (abatido na reparação)",
+    "notes": "Orçamento gratuito. Viatura de cortesia mediante disponibilidade. Levantamento até às 18h30."
+  },
+  "free_context": "FAQ: Dão orçamento? Sim, gratuito antes de reparar. Têm carro de cortesia? Conforme disponibilidade. Quanto demora uma revisão? Geralmente no próprio dia. Avisam quando está pronto? Sim, por WhatsApp."
+}

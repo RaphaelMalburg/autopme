@@ -1,0 +1,12 @@
+{
+  "niche": "accounting",
+  "business_name": "Gabinete de Contabilidade (exemplo)",
+  "language": "pt-PT",
+  "extra": {
+    "opening_hours": "Seg-Sex 9h-18h",
+    "services": "Contabilidade de empresas e ENI, IRS, IVA, recursos humanos, criação de empresa",
+    "prices": "Avença desde 80€/mês (ENI), empresas conforme volume. IRS desde 40€.",
+    "notes": "Primeira reunião gratuita. Software certificado. Apoio na criação de empresa."
+  },
+  "free_context": "FAQ: Quanto custa a avença? Desde 80€/mês para ENI; empresas conforme volume. Ajudam a abrir empresa? Sim. Fazem IRS a particulares? Sim, desde 40€. A primeira reunião é grátis? Sim. Nota: o assistente recolhe os dados e marca reunião, não dá aconselhamento fiscal."
+}

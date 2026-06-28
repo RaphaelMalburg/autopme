@@ -1,0 +1,12 @@
+{
+  "niche": "fitness",
+  "business_name": "Estúdio FitPorto (exemplo)",
+  "language": "pt-PT",
+  "extra": {
+    "opening_hours": "Seg-Sex 7h-22h, Sáb-Dom 9h-14h",
+    "services": "Musculação, aulas de grupo, personal training, avaliação física, nutrição",
+    "prices": "Mensalidade desde 35€, aula experimental grátis, PT 25€/sessão, avaliação 20€",
+    "notes": "Primeira aula experimental gratuita. Planos sem fidelização disponíveis. Duche e cacifos."
+  },
+  "free_context": "FAQ: Tenho aula grátis? Sim, a primeira é experimental. Há fidelização? Há planos com e sem. Posso congelar a mensalidade? Sim, até 1 mês/ano. Têm acompanhamento? Sim, PT e nutrição."
+}

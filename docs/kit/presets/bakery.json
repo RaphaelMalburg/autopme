@@ -1,0 +1,12 @@
+{
+  "niche": "bakery",
+  "business_name": "Padaria & Pastelaria do Bairro (exemplo)",
+  "language": "pt-PT",
+  "extra": {
+    "opening_hours": "Seg-Sáb 7h-20h, Dom 7h30-13h",
+    "services": "Pão fresco, bolos de aniversário por encomenda, salgados, cafetaria, catering",
+    "prices": "Bolo de aniversário desde 25€, salgados desde 0,80€, encomendas com 48h",
+    "notes": "Encomendas de bolos com 48h de antecedência. Catering para eventos. Opções sem glúten."
+  },
+  "free_context": "FAQ: Como encomendo um bolo? Indique sabor, tamanho e data, com 48h de antecedência. Têm sem glúten? Sim, algumas opções. Fazem catering? Sim, para eventos. Pagam-se as encomendas adiantado? Sinal de 50%."
+}

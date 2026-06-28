@@ -1,0 +1,12 @@
+{
+  "niche": "hospitality",
+  "business_name": "Alojamento Local Ribeira (exemplo)",
+  "language": "pt-PT",
+  "extra": {
+    "opening_hours": "Receção 8h-22h. Check-in 15h, check-out 11h.",
+    "services": "Quartos duplos e família, pequeno-almoço, transfers, dicas turísticas",
+    "prices": "Quarto duplo desde 75€/noite, família desde 110€, pequeno-almoço incluído",
+    "notes": "Check-in flexível mediante aviso. Bagagem pode ficar guardada. Perto do centro histórico."
+  },
+  "free_context": "FAQ: A que horas é o check-in? A partir das 15h, flexível mediante aviso. O pequeno-almoço está incluído? Sim. Têm transfer do aeroporto? Sim, mediante marcação. Posso deixar a bagagem? Sim. (Responder também em inglês/espanhol se o hóspede mudar de idioma.)"
+}

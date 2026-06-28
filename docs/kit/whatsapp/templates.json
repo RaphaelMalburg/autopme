@@ -1,0 +1,74 @@
+{
+  "language": "pt_PT",
+  "note": "Templates prontos a submeter via WhatsApp Cloud API / BSP. Variaveis {{n}} preenchidas no envio. category: UTILITY|MARKETING.",
+  "templates": [
+    {
+      "name": "confirmacao_marcacao",
+      "category": "UTILITY",
+      "language": "pt_PT",
+      "components": [
+        {"type": "BODY", "text": "Olá {{1}}! A sua marcação na {{2}} está confirmada para {{3}} às {{4}}. Se precisar de remarcar ou cancelar, responda a esta mensagem. Até breve!", "example": {"body_text": [["Ana", "Clínica Sorriso", "12/03", "15h30"]]}},
+        {"type": "BUTTONS", "buttons": [{"type": "QUICK_REPLY", "text": "Confirmar"}, {"type": "QUICK_REPLY", "text": "Remarcar"}]}
+      ]
+    },
+    {
+      "name": "lembrete_24h",
+      "category": "UTILITY",
+      "language": "pt_PT",
+      "components": [
+        {"type": "BODY", "text": "Olá {{1}}, lembrete da sua marcação na {{2}} amanhã, dia {{3}} às {{4}}. Confirma a sua presença?", "example": {"body_text": [["Ana", "Clínica Sorriso", "13/03", "15h30"]]}},
+        {"type": "BUTTONS", "buttons": [{"type": "QUICK_REPLY", "text": "Confirmo presença"}, {"type": "QUICK_REPLY", "text": "Preciso de remarcar"}]}
+      ]
+    },
+    {
+      "name": "lembrete_dia",
+      "category": "UTILITY",
+      "language": "pt_PT",
+      "components": [
+        {"type": "BODY", "text": "Bom dia {{1}}! Hoje às {{2}} tem a sua marcação na {{3}}. Estamos à sua espera. Morada: {{4}}.", "example": {"body_text": [["Ana", "15h30", "Clínica Sorriso", "Rua X, Porto"]]}}
+      ]
+    },
+    {
+      "name": "remarcacao_ok",
+      "category": "UTILITY",
+      "language": "pt_PT",
+      "components": [
+        {"type": "BODY", "text": "Combinado, {{1}}! A sua marcação foi alterada para {{2}} às {{3}}. Se não der jeito, responda e tratamos.", "example": {"body_text": [["Ana", "15/03", "10h00"]]}}
+      ]
+    },
+    {
+      "name": "vaga_disponivel",
+      "category": "UTILITY",
+      "language": "pt_PT",
+      "components": [
+        {"type": "BODY", "text": "Olá {{1}}! Libertou-se uma vaga na {{2}} para {{3}} às {{4}}. Quer ficar com ela? Responda SIM nos próximos 30 minutos.", "example": {"body_text": [["Ana", "Clínica Sorriso", "12/03", "11h00"]]}},
+        {"type": "BUTTONS", "buttons": [{"type": "QUICK_REPLY", "text": "Sim, quero"}, {"type": "QUICK_REPLY", "text": "Agora não"}]}
+      ]
+    },
+    {
+      "name": "reativacao",
+      "category": "MARKETING",
+      "language": "pt_PT",
+      "components": [
+        {"type": "BODY", "text": "Olá {{1}}! Há algum tempo que não o vemos na {{2}}. Quer marcar {{3}}? Temos disponibilidade esta semana.", "example": {"body_text": [["Ana", "Clínica Sorriso", "a sua limpeza"]]}},
+        {"type": "BUTTONS", "buttons": [{"type": "QUICK_REPLY", "text": "Quero marcar"}, {"type": "QUICK_REPLY", "text": "Não, obrigado"}]}
+      ]
+    },
+    {
+      "name": "pedido_avaliacao",
+      "category": "UTILITY",
+      "language": "pt_PT",
+      "components": [
+        {"type": "BODY", "text": "Obrigado pela sua visita à {{2}}, {{1}}! Se correu bem, deixava-nos uma avaliação? Ajuda imenso: {{3}}", "example": {"body_text": [["Ana", "Clínica Sorriso", "https://g.page/r/exemplo"]]}}
+      ]
+    },
+    {
+      "name": "pedido_orcamento_recebido",
+      "category": "UTILITY",
+      "language": "pt_PT",
+      "components": [
+        {"type": "BODY", "text": "Olá {{1}}, recebemos o seu pedido na {{2}}. Vamos analisar e respondemos em {{3}}. Obrigado!", "example": {"body_text": [["João", "Oficina Central", "24h"]]}}
+      ]
+    }
+  ]
+}

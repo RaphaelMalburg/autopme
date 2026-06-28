@@ -1,0 +1,12 @@
+{
+  "niche": "beauty",
+  "business_name": "Studio Beleza & Estética (exemplo)",
+  "language": "pt-PT",
+  "extra": {
+    "opening_hours": "Ter-Sáb 10h-20h",
+    "services": "Manicure/pedicure, faciais, depilação a laser, massagens, micropigmentação",
+    "prices": "Manicure 18€, facial desde 45€, laser desde 35€/sessão, massagem 50€/60min",
+    "notes": "Marcação obrigatória. Pacotes de sessões com desconto. Cartão-presente disponível."
+  },
+  "free_context": "FAQ: Preciso de marcar? Sim, sempre. Fazem pacotes? Sim, com desconto para várias sessões. Têm cartão-presente? Sim. Cancelo com quanto tempo? Até 24h antes sem custo."
+}

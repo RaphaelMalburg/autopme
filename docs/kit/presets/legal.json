@@ -1,0 +1,12 @@
+{
+  "niche": "legal",
+  "business_name": "Escritório de Advocacia (exemplo)",
+  "language": "pt-PT",
+  "extra": {
+    "opening_hours": "Seg-Sex 9h-18h",
+    "services": "Direito da família, imobiliário, laboral, comercial, contencioso",
+    "prices": "Primeira consulta 60€ (abatida se avançar). Honorários conforme caso.",
+    "notes": "Atendimento por marcação. Confidencialidade total. Primeira reunião para avaliar o caso."
+  },
+  "free_context": "FAQ: Quanto custa a primeira consulta? 60€, abatidos se avançarmos. Tratam de que áreas? Família, imobiliário, laboral, comercial. É confidencial? Totalmente. Atendem online? Sim, mediante marcação. Nota: o assistente recolhe o assunto e a urgência, não dá aconselhamento jurídico."
+}

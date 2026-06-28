@@ -1,0 +1,12 @@
+{
+  "niche": "pharmacy",
+  "business_name": "Farmácia Saúde (exemplo)",
+  "language": "pt-PT",
+  "extra": {
+    "opening_hours": "Seg-Sáb 9h-20h. Serviço de urgência conforme escala.",
+    "services": "Medicamentos, reservas, aconselhamento, medição de tensão, vacinação, dermocosmética",
+    "prices": "Medição de tensão grátis. Vacinação conforme serviço. Reservas sem custo.",
+    "notes": "Reserva de medicamentos por WhatsApp para levantamento. Entregas ao domicílio na zona."
+  },
+  "free_context": "FAQ: Posso reservar um medicamento? Sim, indique o nome e levanta quando estiver pronto. Fazem entregas? Sim, na zona. Têm serviço de vacinação? Sim. Medem a tensão? Sim, gratuito. Nota: o assistente não dá aconselhamento clínico; encaminha para o farmacêutico."
+}

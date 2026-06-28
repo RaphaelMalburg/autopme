@@ -1,0 +1,12 @@
+{
+  "niche": "dental",
+  "business_name": "Clínica Dentária Sorriso (exemplo)",
+  "language": "pt-PT",
+  "extra": {
+    "opening_hours": "Seg-Sex 9h-19h, Sáb 9h-13h",
+    "services": "Consultas de check-up, limpezas, branqueamento, implantes, ortodontia, urgências",
+    "prices": "Primeira consulta 30€, limpeza 50€, branqueamento desde 250€, implante desde 800€",
+    "notes": "Aceita seguros e planos de saúde. Estacionamento próximo. Urgências no próprio dia se houver vaga."
+  },
+  "free_context": "FAQ: Têm consulta de urgência? Sim, no próprio dia conforme disponibilidade. Trabalham com seguros? Sim, principais seguradoras. É preciso pagar a primeira consulta? Sim, 30€, abatidos se avançar com tratamento. Onde estacionar? Parque a 2 min."
+}

@@ -1,0 +1,12 @@
+{
+  "niche": "real_estate",
+  "business_name": "Imobiliária Porto Premium (exemplo)",
+  "language": "pt-PT",
+  "extra": {
+    "opening_hours": "Seg-Sex 9h30-19h, Sáb 10h-13h",
+    "services": "Venda e arrendamento, avaliação de imóveis, gestão de visitas, financiamento",
+    "prices": "Avaliação gratuita. Comissão de venda conforme contrato.",
+    "notes": "Visitas mediante marcação. Apoio em crédito habitação. Carteira de imóveis no centro e arredores."
+  },
+  "free_context": "FAQ: A avaliação é grátis? Sim. Como marco uma visita? Indique o imóvel e a disponibilidade. Ajudam com crédito? Sim, temos parceiros. Trabalham arrendamento? Sim."
+}
