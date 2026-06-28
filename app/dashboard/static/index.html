@@ -62,6 +62,8 @@
     .rstep.active { color: var(--text); }
     .rstep.active .rnum { background: var(--accent); border-color: var(--accent); color: #fff; }
     .rsep { flex: 1; height: 1px; min-width: 14px; background: var(--border); }
+    .talktrack > summary { cursor: pointer; color: var(--accent); font-weight: 600; font-size: 14px; padding: 6px 0; }
+    .talktrack[open] > summary { margin-bottom: 4px; }
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -321,6 +323,7 @@
       <textarea id="free_context" placeholder="Cole aqui notas do prospect, dor que ele descreveu, objetivos, concorrência, qualquer contexto que o agente deva usar…"></textarea>
       <div class="btnrow">
         <button id="btn-load">Carregar demo</button>
+        <button id="btn-preset" class="secondary" title="Preenche os campos com um exemplo realista do nicho escolhido — ideal para uma demo instantânea sem prospect real.">Carregar exemplo do nicho</button>
         <button id="btn-clear" class="ghost">Limpar campos</button>
         <span class="note" id="config-status"></span>
       </div>
@@ -341,6 +344,32 @@
         <button id="btn-pipeline" class="secondary" disabled style="display:none;" title="Cria o cartão do prospect na Pipeline de Clientes do Notion (nicho, contacto, resumo). Aparece só com o Notion configurado.">Enviar para Pipeline (Notion)</button>
         <span class="note" id="commercial-status"></span>
       </div>
+      <details class="talktrack" style="margin-top:12px;">
+        <summary>💬 Talk-track — objeções &amp; fecho (abrir durante a visita)</summary>
+        <div class="grid" style="margin-top:10px;">
+          <div class="card">
+            <h3>Objeções</h3>
+            <ul class="list">
+              <li><b>"Já tenho software"</b> → Ligo-me ao que já têm e automatizo só a parte manual. Não troco nada.</li>
+              <li><b>"Vai parecer um robô"</b> → O cliente escreve como sempre; a diferença é resposta na hora. Casos fora do normal saltam para a vossa equipa.</li>
+              <li><b>"Não temos orçamento"</b> → O diagnóstico é grátis e o pacote de entrada paga-se no 1.º mês com as faltas recuperadas.</li>
+              <li><b>"E o nosso WhatsApp atual?"</b> → Começamos com um número novo dedicado, sem mexer no vosso.</li>
+              <li><b>"Temos de pensar"</b> → Claro. Envio um resumo e falamos na próxima semana — combinamos já o dia?</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Fecho</h3>
+            <p class="small">"Pelo que vimos, começava por <b>[automação]</b>. Setup <b>[€]</b>, <b>[€]</b>/mês, mínimo 3 meses. Faço-vos chegar a proposta hoje e, se fizer sentido, arrancamos na próxima semana. <b>Avançamos?</b>"</p>
+            <h3 style="margin-top:10px;">Regras de ouro</h3>
+            <ul class="list">
+              <li>Começa pela <b>dor</b>, não pela tecnologia.</li>
+              <li>Vende <b>resultado</b> ("menos faltas"), não "IA".</li>
+              <li>Termina sempre com pergunta <b>sim/não</b>.</li>
+              <li>Vende <b>1 automação</b> de cada vez.</li>
+            </ul>
+          </div>
+        </div>
+      </details>
       <div class="kpi-grid">
         <div class="kpi">
           <div class="label">Ganho mensal potencial</div>
@@ -754,6 +783,42 @@
         await generateCommercialPlan(true);
       } catch (e) {
         setErr(st, "Erro ao carregar demo: " + e.message);
+      }
+    }
+
+    // Defaults de ROI por nicho (consultas/dia, no-show%, receita/consulta).
+    const ROI_DEFAULTS = {
+      dental: [16, 15, 60], beauty: [20, 12, 35], fitness: [14, 20, 40],
+      restaurant: [40, 10, 25], automotive: [8, 12, 150], real_estate: [6, 10, 300],
+      legal: [4, 10, 120], accounting: [5, 10, 100], pharmacy: [50, 5, 15],
+      bakery: [30, 5, 20], hospitality: [10, 8, 90], custom: [15, 12, 60],
+    };
+    function applyRoiDefaults(niche, force) {
+      const d = ROI_DEFAULTS[niche]; if (!d) return;
+      const set = (id, v) => { const el = $(id); if (el && (force || !el.value)) el.value = v; };
+      set("roi-day", d[0]); set("roi-cur", d[1]); set("roi-tgt", Math.max(2, Math.round(d[1] / 3))); set("roi-rev", d[2]);
+      if (typeof calcROI === "function") calcROI();
+    }
+
+    async function loadPreset() {
+      const niche = $("niche").value;
+      const st = $("config-status");
+      if (!niche) { setErr(st, "Escolha um nicho primeiro."); return; }
+      st.textContent = "A carregar exemplo…"; st.className = "note";
+      try {
+        const p = await apiGet("/api/scenarios/presets/" + encodeURIComponent(niche));
+        const ex = p.extra || {};
+        $("business_name").value = p.business_name || "";
+        $("extra_opening").value = ex.opening_hours || "";
+        $("extra_services").value = ex.services || "";
+        $("extra_prices").value = ex.prices || "";
+        $("extra_notes").value = ex.notes || "";
+        $("free_context").value = p.free_context || "";
+        if (p.language) $("language").value = p.language;
+        applyRoiDefaults(niche, true);
+        setOk(st, "Exemplo de «" + (p.business_name || niche) + "» carregado. Prima «Carregar demo».");
+      } catch (e) {
+        setErr(st, "Sem exemplo para este nicho: " + e.message);
       }
     }
 
@@ -1516,7 +1581,9 @@
       $("login-password").addEventListener("keydown", (e) => { if (e.key === "Enter") loginDemo(); });
       $("btn-logout").addEventListener("click", logoutDemo);
       $("btn-load").addEventListener("click", loadDemo);
+      $("btn-preset").addEventListener("click", loadPreset);
       $("btn-clear").addEventListener("click", clearFields);
+      $("niche").addEventListener("change", () => applyRoiDefaults($("niche").value, false));
       $("btn-research").addEventListener("click", researchProspect);
       $("btn-commercial").addEventListener("click", () => generateCommercialPlan(false));
       $("btn-proposal").addEventListener("click", openProposal);

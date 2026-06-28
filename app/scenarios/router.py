@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 from .builder import build_scenario
 from .niches import NICHE_CONFIG, get_niche_config, list_niches
+from .presets import get_preset, list_presets
 
 router = APIRouter(prefix="/api/scenarios", tags=["scenarios"])
 
@@ -37,6 +38,21 @@ class BuildRequest(BaseModel):
 async def get_niches_endpoint() -> list[dict[str, str]]:
     """List the available niches for the dashboard selector."""
     return list_niches()
+
+
+@router.get("/presets")
+async def list_presets_endpoint() -> list[dict[str, str]]:
+    """Lista os exemplos de negocio prontos a carregar (1 por nicho)."""
+    return list_presets()
+
+
+@router.get("/presets/{niche}")
+async def get_preset_endpoint(niche: str) -> dict[str, Any]:
+    """Devolve o preset de contexto de um nicho (para preencher a demo)."""
+    preset = get_preset(niche)
+    if preset is None:
+        raise HTTPException(status_code=404, detail=f"Sem preset para o nicho: {niche}")
+    return preset
 
 
 @router.post("/build")

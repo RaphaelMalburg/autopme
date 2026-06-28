@@ -12,6 +12,13 @@ função. Lê pela ordem dos números na primeira vez.
 | [vendas/02-precos-pacotes.md](vendas/02-precos-pacotes.md) | Preços, pacotes, o que inclui cada um | A fazer propostas |
 | [vendas/03-scripts-venda.md](vendas/03-scripts-venda.md) | Abordagem, discovery, objeções, fecho | Antes de cada contacto |
 | [vendas/one-pager-modelo.md](vendas/one-pager-modelo.md) | Modelo de proposta de 1 página | A deixar ao cliente |
+| [vendas/04-sequencia-prospecao.md](vendas/04-sequencia-prospecao.md) | 5 toques de prospeção (WhatsApp/email) | A prospetar |
+| [vendas/05-contrato-modelo.md](vendas/05-contrato-modelo.md) | Proposta/contrato + termos + RGPD | A fechar |
+| [vendas/06-guiao-demo.md](vendas/06-guiao-demo.md) | Guião passo-a-passo da demo (10 min) | Antes de cada demo |
+| [vendas/07-referencias-testemunhos.md](vendas/07-referencias-testemunhos.md) | Testemunhos + programa de referências | Após resultados |
+| [vendas/calculadora-roi.xlsx](vendas/calculadora-roi.xlsx) | Calculadora de ROI em Excel (com fórmulas) | Na visita, ao vivo |
+| [entrega/relatorio-mensal-modelo.md](entrega/relatorio-mensal-modelo.md) | Relatório mensal ao cliente | Todos os meses |
+| [marketing/landing-page.html](marketing/landing-page.html) | Landing page pronta a publicar | Para captar leads |
 | [automacoes/catalogo.md](automacoes/catalogo.md) | Menu de automações que vendes (ficha técnica) | No diagnóstico |
 | [whatsapp/como-funciona-cloud-api.md](whatsapp/como-funciona-cloud-api.md) | Como ligar o WhatsApp a sério (custos, BSP) | A operacionalizar |
 | [whatsapp/templates.md](whatsapp/templates.md) | Templates de mensagem (legível) | A configurar |

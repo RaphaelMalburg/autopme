@@ -13,6 +13,8 @@ from app.crm.notion import (
     DEFAULT_STATE,
     build_pipeline_properties,
     create_pipeline_page,
+    find_pipeline_page_by_name,
+    suggest_package,
 )
 
 logger = logging.getLogger(__name__)
@@ -33,6 +35,7 @@ class PipelinePushRequest(BaseModel):
     retainer_value: Optional[float] = None
     next_contact_date: str = ""  # ISO date, ex: "2026-07-04"
     session_id: Optional[int] = None  # liga ao historico persistido (storage)
+    skip_if_exists: bool = True  # evita duplicados no funil
 
 
 @router.get("/status")
@@ -55,15 +58,36 @@ async def push_to_pipeline(req: PipelinePushRequest) -> dict[str, Any]:
             ),
         )
 
+    business_name = str(req.brief.get("business_name") or "Negocio").strip() or "Negocio"
+
+    # Evitar duplicados: se ja existe um cartao com este nome, devolve-o.
+    if req.skip_if_exists:
+        existing = await find_pipeline_page_by_name(
+            token=token, database_id=database_id, business_name=business_name
+        )
+        if existing:
+            if req.session_id is not None:
+                from app.storage import db as storage_db
+
+                storage_db.mark_pushed(req.session_id, existing)
+            return {"ok": True, "url": existing, "duplicate": True}
+
+    # Sugerir pacote + valores a partir do ROI quando nao foram fornecidos.
+    monthly_gain = float((req.brief.get("roi_summary") or {}).get("monthly_gain") or 0)
+    suggestion = suggest_package(monthly_gain)
+    package = req.package or suggestion["package"]
+    setup_value = req.setup_value if req.setup_value is not None else suggestion["setup_value"]
+    retainer_value = req.retainer_value if req.retainer_value is not None else suggestion["retainer_value"]
+
     properties = build_pipeline_properties(
         req.brief,
         email=req.email,
         phone=req.phone,
         address=req.address,
         state=req.state,
-        package=req.package,
-        setup_value=req.setup_value,
-        retainer_value=req.retainer_value,
+        package=package,
+        setup_value=setup_value,
+        retainer_value=retainer_value,
         next_contact_date=req.next_contact_date,
     )
 

@@ -2,7 +2,17 @@ from app.crm.notion import (
     DEFAULT_STATE,
     NICHE_TO_NOTION,
     build_pipeline_properties,
+    suggest_package,
 )
+
+
+def test_suggest_package_thresholds():
+    assert suggest_package(500)["package"] == "Arranque"
+    assert suggest_package(2000)["package"] == "Base"
+    assert suggest_package(5000)["package"] == "Crescimento"
+    # valores coerentes e crescentes
+    assert suggest_package(5000)["setup_value"] > suggest_package(500)["setup_value"]
+    assert suggest_package(2000)["retainer_value"] >= suggest_package(500)["retainer_value"]
 
 
 def _brief(niche: str = "dental") -> dict:

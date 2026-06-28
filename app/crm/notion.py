@@ -127,6 +127,49 @@ def build_pipeline_properties(
     return props
 
 
+def suggest_package(monthly_gain: float) -> dict[str, Any]:
+    """Sugere pacote + valores (setup/retainer) a partir do ganho potencial mensal.
+
+    Funcao pura. O ganho serve de proxy da dimensao do cliente. Valores = pontos
+    medios das tabelas de preco; o consultor pode sempre ajustar.
+    """
+    g = float(monthly_gain or 0)
+    if g >= 4000:
+        return {"package": "Crescimento", "setup_value": 1500.0, "retainer_value": 400.0}
+    if g >= 1500:
+        return {"package": "Base", "setup_value": 1000.0, "retainer_value": 275.0}
+    return {"package": "Arranque", "setup_value": 600.0, "retainer_value": 200.0}
+
+
+async def find_pipeline_page_by_name(
+    *, token: str, database_id: str, business_name: str, timeout: float = 15.0
+) -> Optional[str]:
+    """Procura um cartao existente pelo nome do negocio. Devolve o URL ou None.
+
+    Evita duplicados no funil quando se corre a mesma demo duas vezes.
+    """
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Notion-Version": NOTION_VERSION,
+        "Content-Type": "application/json",
+    }
+    body = {
+        "filter": {"property": "Nome da Empresa", "title": {"equals": business_name[:200]}},
+        "page_size": 1,
+    }
+    url = f"https://api.notion.com/v1/databases/{database_id}/query"
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            resp = await client.post(url, headers=headers, json=body)
+            resp.raise_for_status()
+            results = resp.json().get("results", [])
+        if results:
+            return results[0].get("url", "")
+    except httpx.HTTPError as e:
+        logger.warning("Notion duplicate check falhou (ignorado): %s", e)
+    return None
+
+
 async def create_pipeline_page(
     *,
     token: str,

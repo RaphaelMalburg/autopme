@@ -77,6 +77,19 @@ def test_advisor_brief_for_preset_niche(preset_path: Path):
     assert brief["export_markdown"], "diagnostico sem export"
 
 
+def test_embedded_presets_match_docs():
+    """app/scenarios/presets.py (canonico) tem de bater certo com docs/kit/presets/*.json."""
+    from app.scenarios.presets import NICHE_PRESETS
+
+    docs = {}
+    for p in _PRESETS:
+        d = json.loads(p.read_text(encoding="utf-8"))
+        docs[d["niche"]] = d
+    assert set(NICHE_PRESETS.keys()) == set(docs.keys()), "presets embutidos != docs"
+    for niche, data in docs.items():
+        assert NICHE_PRESETS[niche] == data, f"preset '{niche}' divergente entre app e docs"
+
+
 def test_whatsapp_templates_json_valid():
     path = _KIT / "whatsapp" / "templates.json"
     data = json.loads(path.read_text(encoding="utf-8"))
